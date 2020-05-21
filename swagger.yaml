@@ -1,0 +1,39 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Template
+paths:
+  /setParam1:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Param"
+      responses:
+        200:
+          description: Null response
+  /setParam2:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Param"
+      responses:
+        200:
+          description: Null response
+components:
+  schemas:
+    State:
+      type: object
+      properties:
+        param1:
+          type: string
+        param2:
+          type: string
+      example:
+        param1: param1
+        param2: param2
+    Param:
+      type: string

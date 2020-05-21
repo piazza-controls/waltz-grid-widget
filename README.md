@@ -1,0 +1,1 @@
+This is a widget boilerplate for Waltz control system.
