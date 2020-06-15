@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const AddAssetHtmlPlugin = require("add-asset-html-webpack-plugin");
 
 module.exports = {
-    mode: "production",
+    mode: "development",
     entry: './test/main.js',
     output: {
         filename: '[name].js',
@@ -55,6 +55,14 @@ module.exports = {
         ]
     },
     devtool: false,
+    devServer: {
+        proxy: {
+            '/tango/*': {
+                target: 'http://localhost:10001',
+                changeOrigin: true,
+            }
+        }
+    },
     plugins: [
         new webpack.SourceMapDevToolPlugin({
             filename: "[file].map",

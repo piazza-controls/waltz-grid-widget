@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "es6",
+    "experimentalDecorators": true,
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "jsx": "react",
+    "allowJs": true,
+    "outDir": "./dist",
+    "declaration": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
+  },
+  "include": [
+    "src/**/*",
+    "src/api/*"
+  ],
+  "exclude": [
+    "node_modules", "*vendor*", "scripts"
+  ]
+}
