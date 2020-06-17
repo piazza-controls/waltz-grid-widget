@@ -1,34 +1,121 @@
 import {ReduxStoreController, registerController} from "waltz-base";
 import AuthController, {ApiType, AuthState, AuthStatus} from "./Authorization";
 import {genTangoURL, getAbsHost} from "../utils";
-import {
-    Aliases,
-    DeviceAttribute,
-    DeviceCommand,
-    DevicePipe, DeviceProperty, DeviceState,
-    DevTree,
-    TangoDevice,
-    TangoDomain,
-    TangoHost
-} from "../api/tango";
+import {TangoDevice} from "../api/tango";
 
-export declare type Member = {
-    brief:{
-        id: string,
-        isMember: boolean,
-        deviceName: string
+export declare interface Failure {
+    errors: Array<{
+        reason: string  // TODO: enum
+        description: string
+        severity: string // TODO: enum
+        origin: string }>
+    quality: string, // TODO: enum
+    timestamp: number
+}
+
+export declare interface Command {
+    cmd_name: string,
+    level: string, // TODO: enum
+    cmd_tag: number,
+    in_type: string, // TODO: enum
+    out_type: string, // TODO: enum
+    in_type_desc: string
+    out_type_desc: string
+    history?: any // TODO: add
+}
+
+export declare interface AttributeValue {
+    name: string,
+    value: string | number
+    quality: string // TODO: enum
+    timestamp: number
+}
+
+export declare interface Attribute {
+    name: string,
+    value?: AttributeValue,
+    info?: AttributeInfo
+    properties?: Map<string, Property|null> // TODO need null?
+    history?: Array<AttributeValue>
+}
+
+export declare interface Pipe {
+    name: string,
+    size: number,
+    timestamp: number,
+    data: Map<string, Array<string|number>>
+}
+
+export declare interface Property {
+    name: string,
+    values: Array<string>
+}
+
+export declare interface State {
+    state: string // TODO: enum?
+    status: string
+}
+
+export declare interface AttributeInfo {
+    name: string,
+    writable: string, // TODO: enum,
+    data_format: string, // TODO: enum,
+    data_type: string, // TODO: enum,
+    max_dim_x: number,
+    max_dim_y: number,
+    description: string,
+    label: string,
+    unit: string,
+    standard_unit: string, // "No standard unit"
+    display_unit: string, // "No display unit"
+    format: string, // "Not specified"
+    min_value: string, // "Not specified"
+    max_value: string, // "Not specified"
+    min_alarm: string, // "Not specified"
+    max_alarm: string, // "Not specified"
+    writable_attr_name: string,
+    level: string, // TODO: enum,
+    extensions: Array<any>
+
+    alarms: {
+        min_alarm: string // "Not specified"
+        max_alarm: string // "Not specified"
+        min_warning: string // "Not specified"
+        max_warning: string // "Not specified"
+        delta_t: string // "Not specified"
+        delta_val: string // "Not specified"
+        extensions: Array<any>
+        tangoObj: {} // TODO: Add
     }
-    device?: TangoDevice
-}
 
-export declare type Family = {
-    [member: string]: Member
+    events: {
+        ch_event: {
+            rel_change: string // "Not specified"
+            abs_change: string // "Not specified"
+            extensions: Array<any>
+            tangoObj: {} // TODO: Add
+        },
+        per_event: {
+            period: number,
+            extensions: Array<any>
+            tangoObj: {} // TODO: Add
+        },
+        arch_event: {
+            rel_change: string // "Not specified"
+            abs_change: string // "Not specified"
+            period: string // "Not specified"
+            extensions: []
+            tangoObj: {} // TODO: Add
+        },
+        tangoObj: {} // TODO: Add
+    },
+    sys_extensions: Array<any>,
+    isMemorized: boolean
+    isSetAtInit: boolean
+    memorized: string // TODO: enum
+    root_attr_name: string // "Not specified"
+    enum_label: Array<any>
 }
-
-export declare type Domain = {
-    [family: string]: Family
-}
-
 
 export declare interface Member {
     name: string,
@@ -45,13 +132,12 @@ export declare interface Member {
         classname: string,
         is_taco: boolean
     },
-    attributes?: Map<string, Attribute|null>
-    commands?: Map<string, Command|null>
-    pipes?: Map<string, Pipe|null>
-    properties?: Map<string, Property|null>
+    attributes?: { [name:string]: Attribute|null }
+    commands?: { [name:string]: Command|null }
+    pipes?: { [name:string]: Pipe|null }
+    properties?: { [name:string]: Property|null }
     state?: State
 }
-
 
 export declare interface ServerEntry {
     name: string
@@ -67,29 +153,12 @@ export declare interface ServerEntry {
     }
 }
 
-export declare interface TangoStateNew {
-    restApiUrl: string
+export declare interface TangoState {
+    restApiUrl?: string
     status: AuthStatus
     authHeader?: string
     servers: {[host: string]: {
-            [port: number]: {
-
-            }
-        }
-    }
-
-}
-
-export declare interface TangoState {
-    host: string,
-    status: AuthStatus,
-    authHeader?: string
-    servers: {
-        [key: string]: {
-            host: string,
-            port: number,
-            aliases?: {},
-            domains: { [domain: string]: Domain }
+            [port: number]: ServerEntry|null
         }
     }
 }
@@ -98,15 +167,12 @@ export class TangoController extends ReduxStoreController<TangoState> {
 
     name: string;
     initialState = {
-        host: getAbsHost("/"),
         status: AuthStatus.NOT_LOGGED,
-        servers: {
-
-        }
+        servers: {}
     };
+
     mappers = {
         grabConnections: this.createMapper<AuthState, AuthState>({
-
             source: AuthController,
             from: state => {
                 return state
@@ -115,26 +181,24 @@ export class TangoController extends ReduxStoreController<TangoState> {
 
                 if(action.payload.api !== ApiType.TANGO) {
                     state = {
-                        host: action.payload.host,
                         status: AuthStatus.API_MISMATCH,
-                        servers: {
-
-                        }
+                        servers: {}
                     }
                     return state
                 } else {
-                    if (state.host === action.payload.host) {
+                    if (state.restApiUrl === action.payload.host) {
                         if(state.status === AuthStatus.LOGGED) {
-                            state = {...state, status: action.payload.status, authHeader: action.payload.authHeader}
+                            const {status, authHeader} = action.payload
+                            state = {...state, status, authHeader}
                             return state
                         } else {
                             const { host, status, authHeader} = action.payload
-                            state = {host, status, authHeader, servers: {}}
+                            state = {restApiUrl: host, status, authHeader, servers: {}}
                             return state
                         }
                     } else {
                         const { host, status, authHeader} = action.payload
-                        state = {host, status, authHeader, servers: {}}
+                        state = {restApiUrl: host, status, authHeader, servers: {}}
                         return state
                     }
                 }
@@ -144,136 +208,219 @@ export class TangoController extends ReduxStoreController<TangoState> {
     actions = {
         addServer: this.createAction<{host: string, port: number}>({
             action: (state, action) => {
-
                 const {host, port} = action.payload
-                const key = `${host}:${port}`
-
-                if(!state.servers.hasOwnProperty(key)) {
-                    state.servers[key] = {host, port, domains: {}}
-                }
+                if(!state.servers.hasOwnProperty(host)) state.servers[host] = {}
+                if(!state.servers[host].hasOwnProperty(port)) state.servers[host][port] = null
             }
         }),
-        loadStructure: this.createAsyncAction<{key: string}, TangoHost>({
+        loadPath: this.createAsyncAction<string, Array<{path:string, data: {}}>>({
             action: async (input, api) => {
 
-                const state = (api.getState() as any)[this.name] as TangoState // TODO move to parent?
-                const {host, port} = state.servers[input.key]
+                const fetched: Array<{path: string, data: {}}> = []
 
-                const apiUrl = new URL(`hosts/${host}/${port}/`, genTangoURL(state.host)).href
-                const devTreeUrl = new URL(`devices/tree`, apiUrl).href
+                const state = (api.getState() as any)[this.name] as TangoState
 
-                const resp = await (await fetch(apiUrl, {headers: {Authorization: state.authHeader}})).json()
+                const parts = input.split("/")
 
-                const devTree: DevTree = await (
-                    await fetch(devTreeUrl, {headers: {Authorization: state.authHeader}})).json()
+                if (parts.length >= 2) {
+                    const [host, port] = [parts[0], Number(parts[1])]
+                    const apiUrl = new URL(`hosts/${host}/${port}/`, genTangoURL(state.restApiUrl)).href
 
-                return devTree[0]
-            },
-            fulfilled(state, action) {
+                    const stateHasServerInfo = (state.servers.hasOwnProperty(host) &&
+                        state.servers[host].hasOwnProperty(port) &&
+                        state.servers[host][port] !== null)
 
-                const tangoHost = action.payload
+                    if(!stateHasServerInfo || parts.length === 2) {
 
-                const server = state.servers[action.meta.arg.key]
+                        const serverResp =  await (
+                            await fetch(apiUrl, {headers: {Authorization: state.authHeader}})).json()
 
-                server.aliases = (tangoHost.data[0] as Aliases)
-
-                const domains = tangoHost.data.slice(1) as Array<TangoDomain>
-                const domainsNames = domains.map(domain => domain.value)
-                Object.keys(server.domains).forEach(key => {
-                    if (!domainsNames.includes(key)) delete server.domains[key]})
-
-                domains.forEach(extDomain => {
-                    if(!server.domains.hasOwnProperty(extDomain.value)) {
-                        server.domains[extDomain.value] = {}
+                        fetched.push({path: `${host}/${port}`, data: serverResp})
+                        if (serverResp.hasOwnProperty("quality") && serverResp.quality === "FAILURE") {
+                            return fetched
+                        }
+                        if(parts.length === 2) {
+                            return fetched
+                        }
                     }
 
-                    const domain = server.domains[extDomain.value]
-
-                    const families = extDomain.data
-                    const familiesNames = families.map(family => family.value)
-
-                    Object.keys(domain).forEach(key => {
-                        if (!familiesNames.includes(key)) delete domain[key]
-                    })
-
-                    families.forEach(extFamily => {
-                        if(!domain.hasOwnProperty(extFamily.value)) {
-                            domain[extFamily.value] = {}
+                    if (parts.length >= 3) {
+                        if(parts[2] !== "devices") {
+                            throw new Error(`third path component should be "devices" instead of ${parts[2]}`)
                         }
 
-                        const family = domain[extFamily.value]
-                        const members = extFamily.data
-                        const membersNames = members.map(member => member.value)
+                        const stateHasDevices = stateHasServerInfo? state.servers[host][port].devices !== null : false
 
-                        Object.keys(family).forEach(key => {
-                            if (!membersNames.includes(key)) delete family[key]
-                        })
+                        const devicesUrl = new URL(`devices/`, apiUrl).href
 
-                        members.forEach(extMember => {
-                            if(!family.hasOwnProperty(extMember.value)) {
-                                family[extMember.value] = {
-                                    brief: {
-                                        id: extMember.id,
-                                        isMember: extMember.isMember,
-                                        deviceName: extMember.device_name
-                                    }
-                                }
-                            } else {
-                                const member = family[extMember.value]
-                                member.brief.id = extMember.id
-                                member.brief.isMember = extMember.isMember
-                                member.brief.deviceName = extMember.device_name
+                        if(!stateHasDevices || parts.length === 3) {
+
+                            const devicesResp =  await (
+                                await fetch(devicesUrl, {headers: {Authorization: state.authHeader}})).json()
+
+                            fetched.push({path: `${host}/${port}/devices`, data: devicesResp})
+                            if (devicesResp.hasOwnProperty("quality") && devicesResp.quality === "FAILURE") {
+                                return fetched
                             }
-                        })
-                    })
-                })
-            },
-            rejected(state, action) {
-                console.log(action)
-            }
-        }),
-        loadPath: this.createAsyncAction<{server: string, path: string}, {path: string, data: Object}>({
-            action: async (input, api) => {
+                            if(parts.length === 3) {
+                                return fetched
+                            }
+                        }
 
-                const state = (api.getState() as any)[this.name] as TangoState // TODO move to parent?
-                const {host, port} = state.servers[input.server]
-                const apiUrl = new URL(`hosts/${host}/${port}/`, genTangoURL(state.host)).href
+                        if(parts.length < 6) {
+                            throw new Error("Unsupported path - it should have 2,3 or 6+ components")
+                        }
 
-                const parts = input.path.split("/");
+                        const [domain, family, member] = parts.slice(3, 6)
+                        const stateHasDevice = stateHasDevices?
+                            state.servers[host][port].devices.hasOwnProperty(domain) &&
+                            state.servers[host][port].devices[domain].hasOwnProperty(family) &&
+                            state.servers[host][port].devices[domain][family].hasOwnProperty(member) &&
+                            state.servers[host][port].devices[domain][family][member] !== null: false
 
+                        const deviceUrl = new URL(`${domain}/${family}/${member}/`, devicesUrl).href
 
+                        if(!stateHasDevice || parts.length === 6) {
+                            const deviceResp =  await (
+                                await fetch(deviceUrl, {headers: {Authorization: state.authHeader}})).json()
 
+                            fetched.push({path: `${host}/${port}/devices/${domain}/${family}/${member}`,
+                                data: deviceResp})
+                            if (deviceResp.hasOwnProperty("quality") && deviceResp.quality === "FAILURE") {
+                                return fetched
+                            }
 
+                            if(parts.length === 6) {
+                                return fetched
+                            }
+                        }
 
-                // const devTreeUrl = new URL(`devices/tree`, apiUrl).href
+                        if(parts.length === 7) {
+                            switch (parts[6]) {
+                                case "attributes":
+                                {
+                                    const attrsUrl = new URL(`attributes/`, deviceUrl).href
+                                    const attrsResp =  await (
+                                        await fetch(attrsUrl, {headers: {Authorization: state.authHeader}})).json()
+                                    fetched.push({
+                                        path: `${host}/${port}/devices/${domain}/${family}/${member}/attributes`,
+                                        data: attrsResp
+                                    })
+                                    return fetched
+                                }
+                                case "commands":
+                                case "pipes":
+                                case "properties":
+                                case "state":
+                                    throw new Error("Not Implemented")
+                                default:
+                                    throw new Error("Unknown device property")
+                            }
+                        }
 
+                        if (parts.length >= 7) {
 
+                            // const stateHasDevices = stateHasServerInfo? state.servers[host][port].devices !== null : false
+                            // const devicesUrl = new URL(`devices/`, apiUrl).href
 
-                // const resp = await (await fetch(apiUrl, {headers: {Authorization: state.authHeader}})).json()
+                            throw new Error("Not implemented")
+                        }
 
-                // console.log(input.path)
-                // const regex = /([^$]*)\/tango\/rest\/rc4\/hosts\/([^\/$]*)\/([0-9]*)([^$]*)/
-                // const [ url, host, port, path ]= regex.exec(input.path).slice(1)
-                //
-                //
-                // console.log(api.getState())
-                // console.log(this.name)
-                // console.log(api.getState()[this.name])
-                //
-                // const headers = new Headers({
-                //     "Authorization": api.getState()[this.name].authHeader
-                // })
-                //
-                // console.log(headers)
-                //
-                // if(!path || path === "/") {
-                //     const resp = await fetch(`${url}/tango/rest/rc4/hosts/${host}/${port}/devices/tree`, {headers})
-                //     console.log(resp)
-                // }
-                //
-                // console.log(url, host, port, path)
+                    }
+
+                } else {
+                    throw new Error("Unsupported path - it should have 2,3 or 6+ components")
+                }
+
             },
             fulfilled(state, action) {
+
+                action.payload.forEach(entry => {
+                    const {path, data} = entry
+                    const parts = path.split("/")
+
+                    switch (parts.length) {
+                        case 2: {
+                            const [host, port] = [parts[0], Number(parts[1])]
+                            if (!state.servers.hasOwnProperty(host)) state.servers[host] = {}
+                            // TODO: check overrides
+                            const serverInfo = data as ServerEntry
+                            state.servers[host][port] = {
+                                host: serverInfo.host,
+                                port: serverInfo.port,
+                                info: serverInfo.info,
+                                name: serverInfo.name,
+                                devices: null,
+                            }
+                        }
+                            break
+                        case 3: {
+                            const [host, port] = [parts[0], Number(parts[1])]
+
+                            const devData = data as Array<{ name: string, href: string }>
+
+                            const devices: {
+                                [key: string]:
+                                    { [key: string]: { [key: string]: Member | null } }
+                            } = {}
+
+                            devData.forEach(dev => {
+                                const [domain, family, member] = dev.name.split("/")
+
+                                if (!devices.hasOwnProperty(domain)) devices[domain] = {}
+                                if (!devices[domain].hasOwnProperty(family)) devices[domain][family] = {}
+                                devices[domain][family][member] = null
+                            })
+
+                            state.servers[host][port].devices = devices
+                        }
+                            break
+
+                        case 6: {
+                            const [host, port] = [parts[0], Number(parts[1])]
+                            const [domain, family, member] = [parts[3], parts[4], parts[5]]
+
+                            const devData = data as Member
+
+                            state.servers[host][port].devices[domain][family][member] = {
+                                name: devData.name,
+                                info: devData.info,
+                                attributes: null,
+                                commands: null,
+                                pipes: null,
+                                properties: null,
+                                state: null
+                            }
+                        }
+                        break
+                        case 7: {
+                            const [host, port] = [parts[0], Number(parts[1])]
+                            const [domain, family, member] = [parts[3], parts[4], parts[5]]
+                            const prop = parts[6]
+                            switch (prop) {
+                                case "attributes":
+                                {
+                                    console.log(data)
+                                    const attrsData = data as Array<Attribute>
+                                    const attributes: {[name: string]: Attribute|null} = {}
+                                    attrsData.forEach(attr => attributes[attr.name] = null)
+                                    state.servers[host][port].devices[domain][family][member].attributes = attributes
+                                }
+                                break
+                                case "commands":
+                                case "pipes":
+                                case "properties":
+                                case "state":
+                                    throw new Error("Not Implemented")
+                                default:
+                                    throw new Error("Unknown device property")
+                            }
+                        }
+                        break
+                        default:
+                            throw new Error(`unexpected path ${path}`)
+                    }
+                })
                 console.log(action)
             },
             rejected(state, action) {

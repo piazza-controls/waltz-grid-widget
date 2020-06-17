@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useDrop } from 'react-dnd'
-import {DraggableTreeItem, ItemTypes} from "./TangoTree";
+import {ItemTypes} from "./TangoTree";
 import {DropTargetMonitor} from "react-dnd/lib/interfaces/monitors";
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
+import TangoController from "../controllers/Tango";
 
 
 declare interface Device {
@@ -15,6 +16,7 @@ declare interface Device {
 
     reference: {
         host: string
+        port: number
         path: string
     }
 }
@@ -23,6 +25,42 @@ export default function() {
 
     const el = useRef(null);
     const [devices, setDevices] = useState<Array<Device>>([])
+    const selector = TangoController.selector
+    const {loadPath} = TangoController.actions
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            devices.forEach(dev => {
+
+                const {host, port} = dev.reference
+                const [domain, family, member] = dev.reference.path.split("/")
+                const servers = selector.servers
+
+                const deviceLoaded = servers.hasOwnProperty(host) &&
+                    servers[host].hasOwnProperty(port) &&
+                    servers[host][port].devices !== null &&
+                    servers[host][port].devices.hasOwnProperty(domain) &&
+                    servers[host][port].devices[domain].hasOwnProperty(family) &&
+                    servers[host][port].devices[domain][family].hasOwnProperty(member) &&
+                    servers[host][port].devices[domain][family][member] !== null
+
+                const attributesLoaded = deviceLoaded &&
+                    servers[host][port].devices[domain][family][member].attributes !== null
+
+                if (!deviceLoaded) {
+                    loadPath(`${host}/${port}/devices/${domain}/${family}/${member}`)
+                } else {
+                    if(servers[host][port].devices[domain][family][member].info.exported) {
+                        if(!attributesLoaded) {
+                            loadPath(`${host}/${port}/devices/${domain}/${family}/${member}/attributes`)
+                        }
+                    }
+                }
+            })
+            //
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [devices, selector]);
 
     const getDropPos = (monitor: DropTargetMonitor): {x: number, y: number} => {
         const p0 =  monitor.getInitialClientOffset()
@@ -44,11 +82,11 @@ export default function() {
                     h: 0.05,
                 },
                 reference: {
-                    host: (item as any).server,
+                    host: (item as any).host,
+                    port: (item as any).port,
                     path: (item as any).id
                 }
             }
-            // console.log(setDevices, devices, [...devices, device])
             setDevices(prevDevices => ([...prevDevices, device]))
         }
     })
