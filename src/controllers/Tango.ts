@@ -1,7 +1,7 @@
 import {ReduxStoreController, registerController} from "waltz-base";
 import AuthController, {ApiType, AuthState, AuthStatus} from "./Authorization";
 import {genTangoURL, getAbsHost} from "../utils";
-import {TangoDevice} from "../api/tango";
+import * as _ from "lodash"
 
 export declare interface Failure {
     errors: Array<{
@@ -11,6 +11,42 @@ export declare interface Failure {
         origin: string }>
     quality: string, // TODO: enum
     timestamp: number
+}
+
+export declare interface ApiInfo {
+    updated: number
+}
+
+export declare interface ApiPoint<T> {
+    error?: Failure
+    value?: T
+    __api__: ApiInfo
+}
+
+export declare interface TangoState {
+    restApiUrl?: string
+    status: AuthStatus
+    authHeader?: string
+    servers: {[host: string]: {
+            [port: number]: ApiPoint<ServerEntry>
+        }
+    }
+}
+
+export declare interface Grouping {
+    [domain: string]: {
+        [family: string]: {
+            [member: string]: ApiPoint<Member>
+        }
+    }
+}
+
+export declare interface ServerEntry {
+    name: string
+    host: string
+    port: number // TODO: String?
+    info: Array<string>
+    devices: ApiPoint<Grouping>
 }
 
 export declare interface Command {
@@ -33,17 +69,17 @@ export declare interface AttributeValue {
 
 export declare interface Attribute {
     name: string,
-    value?: AttributeValue,
-    info?: AttributeInfo
-    properties?: Map<string, Property|null> // TODO need null?
-    history?: Array<AttributeValue>
+    value: ApiPoint<AttributeValue>
+    info: ApiPoint<AttributeInfo>
+    properties?: ApiPoint<{[key: string]: Property}> // TODO need null?
+    history: ApiPoint<Array<AttributeValue>>
 }
 
 export declare interface Pipe {
     name: string,
     size: number,
     timestamp: number,
-    data: Map<string, Array<string|number>>
+    data: { [key: string]: Array<string|number> }
 }
 
 export declare interface Property {
@@ -132,33 +168,46 @@ export declare interface Member {
         classname: string,
         is_taco: boolean
     },
-    attributes?: { [name:string]: Attribute|null }
-    commands?: { [name:string]: Command|null }
-    pipes?: { [name:string]: Pipe|null }
-    properties?: { [name:string]: Property|null }
-    state?: State
+    attributes: ApiPoint<{ [name:string]: Attribute|null }>
+    commands: ApiPoint<{ [name:string]: Command|null }>
+    pipes: ApiPoint<{ [name:string]: Pipe|null }>
+    properties: ApiPoint<{ [name:string]: Property|null }>
+    state: ApiPoint<State>
 }
 
-export declare interface ServerEntry {
-    name: string
-    host: string
-    port: number // TODO: String?
-    info: Array<string>
-    devices?: {
-        [domain: string]: {
-            [family: string]: {
-                [member: string]: Member|null
+export type Selector = {
+    [host: string]: {
+        [port: string]: {
+            devices: {
+                [domain: string]: {
+                    [family: string]: {
+                        [member: string]: {
+                            attributes?: {
+                                [name: string]: {
+                                    value?: boolean
+                                    info?: boolean
+                                    properties?: {
+                                        [name: string]: boolean
+                                    }
+                                    history?: boolean
+                                }
+                            },
+                            commands?: {
+                                [name: string]: {
+                                    history?: boolean
+                                }
+                            },
+                            pipes?: {
+                                [name: string]: boolean
+                            }
+                            properties?: {
+                                [name: string]: boolean
+                            }
+                            state?: boolean
+                        }
+                    }
+                }
             }
-        }
-    }
-}
-
-export declare interface TangoState {
-    restApiUrl?: string
-    status: AuthStatus
-    authHeader?: string
-    servers: {[host: string]: {
-            [port: number]: ServerEntry|null
         }
     }
 }
@@ -206,227 +255,174 @@ export class TangoController extends ReduxStoreController<TangoState> {
         })
     }
     actions = {
-        addServer: this.createAction<{host: string, port: number}>({
-            action: (state, action) => {
-                const {host, port} = action.payload
-                if(!state.servers.hasOwnProperty(host)) state.servers[host] = {}
-                if(!state.servers[host].hasOwnProperty(port)) state.servers[host][port] = null
-            }
-        }),
-        loadPath: this.createAsyncAction<string, Array<{path:string, data: {}}>>({
+        load: this.createAsyncAction<Selector, Array<{path:string, data: {}}>>({
+
             action: async (input, api) => {
 
-                const fetched: Array<{path: string, data: {}}> = []
+                const delayMs = 5000 // TODO: remove hardcode
 
                 const state = (api.getState() as any)[this.name] as TangoState
-
-                const parts = input.split("/")
-
-                if (parts.length >= 2) {
-                    const [host, port] = [parts[0], Number(parts[1])]
-                    const apiUrl = new URL(`hosts/${host}/${port}/`, genTangoURL(state.restApiUrl)).href
-
-                    const stateHasServerInfo = (state.servers.hasOwnProperty(host) &&
-                        state.servers[host].hasOwnProperty(port) &&
-                        state.servers[host][port] !== null)
-
-                    if(!stateHasServerInfo || parts.length === 2) {
-
-                        const serverResp =  await (
-                            await fetch(apiUrl, {headers: {Authorization: state.authHeader}})).json()
-
-                        fetched.push({path: `${host}/${port}`, data: serverResp})
-                        if (serverResp.hasOwnProperty("quality") && serverResp.quality === "FAILURE") {
-                            return fetched
+                const diff: any = {}
+                const validator = (path: Array<string>): ProxyHandler<any> => ({
+                    get(target, key) {
+                        if (typeof target[key] === 'object' && target[key] !== null) {
+                            return new Proxy<any>(target[key], validator([...path, key as string]))
+                        } else {
+                            return target[key];
                         }
-                        if(parts.length === 2) {
-                            return fetched
-                        }
-                    }
-
-                    if (parts.length >= 3) {
-                        if(parts[2] !== "devices") {
-                            throw new Error(`third path component should be "devices" instead of ${parts[2]}`)
-                        }
-
-                        const stateHasDevices = stateHasServerInfo? state.servers[host][port].devices !== null : false
-
-                        const devicesUrl = new URL(`devices/`, apiUrl).href
-
-                        if(!stateHasDevices || parts.length === 3) {
-
-                            const devicesResp =  await (
-                                await fetch(devicesUrl, {headers: {Authorization: state.authHeader}})).json()
-
-                            fetched.push({path: `${host}/${port}/devices`, data: devicesResp})
-                            if (devicesResp.hasOwnProperty("quality") && devicesResp.quality === "FAILURE") {
-                                return fetched
+                    },
+                    set (target, key, value) {
+                        let diffPart = diff
+                        path.forEach(part => {
+                            if(!diffPart.hasOwnProperty(part)) {
+                                diffPart[part] = {}
                             }
-                            if(parts.length === 3) {
-                                return fetched
-                            }
-                        }
-
-                        if(parts.length < 6) {
-                            throw new Error("Unsupported path - it should have 2,3 or 6+ components")
-                        }
-
-                        const [domain, family, member] = parts.slice(3, 6)
-                        const stateHasDevice = stateHasDevices?
-                            state.servers[host][port].devices.hasOwnProperty(domain) &&
-                            state.servers[host][port].devices[domain].hasOwnProperty(family) &&
-                            state.servers[host][port].devices[domain][family].hasOwnProperty(member) &&
-                            state.servers[host][port].devices[domain][family][member] !== null: false
-
-                        const deviceUrl = new URL(`${domain}/${family}/${member}/`, devicesUrl).href
-
-                        if(!stateHasDevice || parts.length === 6) {
-                            const deviceResp =  await (
-                                await fetch(deviceUrl, {headers: {Authorization: state.authHeader}})).json()
-
-                            fetched.push({path: `${host}/${port}/devices/${domain}/${family}/${member}`,
-                                data: deviceResp})
-                            if (deviceResp.hasOwnProperty("quality") && deviceResp.quality === "FAILURE") {
-                                return fetched
-                            }
-
-                            if(parts.length === 6) {
-                                return fetched
-                            }
-                        }
-
-                        if(parts.length === 7) {
-                            switch (parts[6]) {
-                                case "attributes":
-                                {
-                                    const attrsUrl = new URL(`attributes/`, deviceUrl).href
-                                    const attrsResp =  await (
-                                        await fetch(attrsUrl, {headers: {Authorization: state.authHeader}})).json()
-                                    fetched.push({
-                                        path: `${host}/${port}/devices/${domain}/${family}/${member}/attributes`,
-                                        data: attrsResp
-                                    })
-                                    return fetched
-                                }
-                                case "commands":
-                                case "pipes":
-                                case "properties":
-                                case "state":
-                                    throw new Error("Not Implemented")
-                                default:
-                                    throw new Error("Unknown device property")
-                            }
-                        }
-
-                        if (parts.length >= 7) {
-
-                            // const stateHasDevices = stateHasServerInfo? state.servers[host][port].devices !== null : false
-                            // const devicesUrl = new URL(`devices/`, apiUrl).href
-
-                            throw new Error("Not implemented")
-                        }
-
-                    }
-
-                } else {
-                    throw new Error("Unsupported path - it should have 2,3 or 6+ components")
-                }
-
-            },
-            fulfilled(state, action) {
-
-                action.payload.forEach(entry => {
-                    const {path, data} = entry
-                    const parts = path.split("/")
-
-                    switch (parts.length) {
-                        case 2: {
-                            const [host, port] = [parts[0], Number(parts[1])]
-                            if (!state.servers.hasOwnProperty(host)) state.servers[host] = {}
-                            // TODO: check overrides
-                            const serverInfo = data as ServerEntry
-                            state.servers[host][port] = {
-                                host: serverInfo.host,
-                                port: serverInfo.port,
-                                info: serverInfo.info,
-                                name: serverInfo.name,
-                                devices: null,
-                            }
-                        }
-                            break
-                        case 3: {
-                            const [host, port] = [parts[0], Number(parts[1])]
-
-                            const devData = data as Array<{ name: string, href: string }>
-
-                            const devices: {
-                                [key: string]:
-                                    { [key: string]: { [key: string]: Member | null } }
-                            } = {}
-
-                            devData.forEach(dev => {
-                                const [domain, family, member] = dev.name.split("/")
-
-                                if (!devices.hasOwnProperty(domain)) devices[domain] = {}
-                                if (!devices[domain].hasOwnProperty(family)) devices[domain][family] = {}
-                                devices[domain][family][member] = null
-                            })
-
-                            state.servers[host][port].devices = devices
-                        }
-                            break
-
-                        case 6: {
-                            const [host, port] = [parts[0], Number(parts[1])]
-                            const [domain, family, member] = [parts[3], parts[4], parts[5]]
-
-                            const devData = data as Member
-
-                            state.servers[host][port].devices[domain][family][member] = {
-                                name: devData.name,
-                                info: devData.info,
-                                attributes: null,
-                                commands: null,
-                                pipes: null,
-                                properties: null,
-                                state: null
-                            }
-                        }
-                        break
-                        case 7: {
-                            const [host, port] = [parts[0], Number(parts[1])]
-                            const [domain, family, member] = [parts[3], parts[4], parts[5]]
-                            const prop = parts[6]
-                            switch (prop) {
-                                case "attributes":
-                                {
-                                    console.log(data)
-                                    const attrsData = data as Array<Attribute>
-                                    const attributes: {[name: string]: Attribute|null} = {}
-                                    attrsData.forEach(attr => attributes[attr.name] = null)
-                                    state.servers[host][port].devices[domain][family][member].attributes = attributes
-                                }
-                                break
-                                case "commands":
-                                case "pipes":
-                                case "properties":
-                                case "state":
-                                    throw new Error("Not Implemented")
-                                default:
-                                    throw new Error("Unknown device property")
-                            }
-                        }
-                        break
-                        default:
-                            throw new Error(`unexpected path ${path}`)
+                            diffPart = diffPart[part]
+                        })
+                        diffPart[key] = value
+                        target[key] = value
+                        return true
                     }
                 })
-                console.log(action)
+                const proxyState = new Proxy<TangoState>(state, validator([]))
+                const apiUrl = new URL(`hosts/`, genTangoURL(proxyState.restApiUrl)).href
+
+                const process = async (subState: any, subSelector: any, url: any) => {
+
+                    if((subState.value === null && subState.error === null) ||
+                        subState.value && ((new Date()).getTime() - subState.__api__.updated) > delayMs) {
+
+                        const resp = await (
+                            await fetch(url, {headers: {Authorization: state.authHeader}})).json()
+
+                        const changeLinks = (subState: any, resp: any) =>  {
+                            Object.keys(resp).forEach(key => {
+                                if((typeof resp[key] === "string" && resp[key].startsWith("http"))) {
+                                    const alreadyHasLink = subState !== null &&
+                                        subState.hasOwnProperty(key) &&
+                                        subState[key].hasOwnProperty("__api__") && false // TODO: fix
+                                    if(alreadyHasLink) {
+                                        delete resp[key]
+                                        resp[key] = subState[key]
+                                    } else {
+                                        resp[key] = {
+                                            value: null,
+                                            error: null,
+                                            __api__: {
+                                                updated: 0
+                                            }
+                                        }
+                                    }
+                                } else if (typeof resp[key] === "object") {
+                                    changeLinks(subState === null? null: subState[key], resp[key])
+                                }
+                            })
+                        }
+
+                        // TODO catch error
+
+                        if(Array.isArray(resp)) {
+
+                            if(subState.value === null) {
+                                subState.value = {}
+                            }
+
+                            if(resp[0].hasOwnProperty("name")) {
+                                if(resp[0].hasOwnProperty("href")) {
+                                    resp.forEach(r => {
+                                        const parts = r.name.split("/")
+                                        let subSubState = subState.value
+                                        parts.slice(0, parts.length - 1).forEach((part: string) => {
+                                            if(!subSubState.hasOwnProperty(part)) {
+                                                subSubState[part] = {}
+                                            }
+                                            subSubState = subSubState[part]
+                                        })
+                                        if(!subSubState.hasOwnProperty(parts[parts.length - 1])) {
+                                            subSubState[parts[parts.length - 1]] = {
+                                                error: null,
+                                                value: null,
+                                                __api__: {
+                                                    updated: 0
+                                                }
+                                            }
+                                        }
+                                    })
+                                } else {
+                                    resp.forEach(r => {
+                                        changeLinks(
+                                            subState.value.hasOwnProperty(r.name)?
+                                                subState.value[r.name]: null, r)
+                                        subState.value[r.name] = r
+                                    })
+                                }
+                            }
+                            subState.__api__.updated = (new Date()).getTime()
+                        } else {
+                            changeLinks(subState.value, resp)
+                            subState.value = resp
+                            subState.__api__.updated = (new Date()).getTime()
+                        }
+                    }
+
+                    const findApi = async (subState: any, subSelector: any, url: string) => {
+                        const keys = Object.keys(subSelector)
+                        await Promise.all(Object.entries(subState).map(async entry => {
+                            const [key, value] = entry
+                            const haveStar = keys.includes("*")
+                            if(keys.includes(key) || haveStar) {
+                                if(typeof value === "object") {
+                                    if(value.hasOwnProperty("__api__")) {
+                                        await process(subState[key], subSelector[haveStar? "*": key],
+                                            new URL(key, `${url}/`).href)
+                                    } else {
+                                        await findApi(subState[key], subSelector[haveStar? "*": key],
+                                            new URL(key, `${url}/`).href)
+                                    }
+                                }
+                            }
+                        }))
+                    }
+
+                    await findApi(subState.value, subSelector, url)
+                }
+
+                let servers: Array<{name: string, href: string}> = []
+
+
+                await Promise.all(Object.entries(input).map(async entry => {
+                    const [host, ports] = entry
+                    await Promise.all(Object.entries(ports).map( async portEntry => {
+                        const [port, value] = portEntry
+                        if(!proxyState.servers.hasOwnProperty(host)) {
+                            proxyState.servers[host] = {}
+                        }
+                        if(!proxyState.servers[host].hasOwnProperty(port)) {
+                            proxyState.servers[host][Number(port)] = {
+                                error: null,
+                                value: null,
+                                __api__: {
+                                    updated: 0
+                                }
+                            }
+                        }
+                        await process(
+                            proxyState.servers[host][Number(port)],
+                            input[host][port],
+                            new URL(`${host}/${port}`, apiUrl).href)
+                    }))
+                }))
+
+                return diff
+            },
+            fulfilled(state, action) {
+                console.log(state, action.payload)
+                return _.merge(action.payload, state)
             },
             rejected(state, action) {
                 console.log(action)
             }
-        })
+        }),
     };
     selectors: {}
 }

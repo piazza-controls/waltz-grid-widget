@@ -38,11 +38,16 @@ export function DraggableTreeItem(props: {nodeId: string, label: string, host: s
 
 export default function MultiSelectTreeView() {
     const selector = TangoController.selector
-    const {loadPath, addServer} = TangoController.actions
+    const {load} = TangoController.actions
+
+    console.log(selector)
 
     const [newPort, setNewPort] = useState<number>(10000)
     const [newHost, setNewHost] = useState("tango-cs")
     const [selServer, setSelectedServer] = useState<{host: string, port: number}>(null)
+
+    console.log(selector.servers)
+    console.log(selServer)
 
     return (
         <>
@@ -60,13 +65,15 @@ export default function MultiSelectTreeView() {
                                        value={newPort} onChange={e => setNewPort(Number(e.target.value))}/>
                             {/*           TODO: CSS */}
                             <Create style={{height: "100%"}} onClick={
-                                e => {addServer({host: newHost, port: newPort})}
+
+                                e => {
+                                    load({[newHost]: {[Number(newPort)]: {devices: {}}}})
+                                }
                             } />
                         </div>
                         <Select onChange={e => {
                             const key = e.target.value as string
                             const [host, port] =  key.split(":")
-                            loadPath(`${host}/${port}/devices`)
                             setSelectedServer({host, port: Number(port)})
                         }}>
                             {Object.entries(selector.servers).map(entry => {
@@ -96,11 +103,12 @@ export default function MultiSelectTreeView() {
                             selServer !== null &&
                             selector.servers.hasOwnProperty(selServer.host) &&
                             selector.servers[selServer.host].hasOwnProperty(selServer.port) &&
-                            selector.servers[selServer.host][selServer.port] !== null &&
-                            selector.servers[selServer.host][selServer.port].devices !== null ? <>
+                            selector.servers[selServer.host][selServer.port].value !== null &&
+                            selector.servers[selServer.host][selServer.port].value.devices.value !== null ? <>
                                 {
-                                    Object.entries(selector.servers[selServer.host][selServer.port].devices).map(
+                                    Object.entries(selector.servers[selServer.host][selServer.port].value.devices.value).map(
                                         domainEntry => {
+                                            console.log(domainEntry)
                                         const [domainKey, domain] = domainEntry
                                         return <TreeItem nodeId={domainKey} label={domainKey} >
                                             {Object.entries(domain).map(familyEntry => {
@@ -121,7 +129,8 @@ export default function MultiSelectTreeView() {
                                         </TreeItem>
                                     })
                                 }
-                            </> : <></>
+                            </> :
+                                <></>
                         }
                     </TreeView>
                 </ExpansionPanelDetails>
