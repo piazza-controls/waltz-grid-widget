@@ -77,8 +77,8 @@ export default function() {
                 {
                     selector[host][port].devices[domain][family][member] = {
                         attributes: {},
-                        properties: {"*": true},
-                        state: true
+                        // properties: {"*": true},
+                        // state: true
                     }
                 }
             })
@@ -133,6 +133,8 @@ export default function() {
             const device = selector.servers[host]?.[port]?.value?.devices.value?.[domain]?.[family]?.[member]?.value
 
             const attributes = device?.attributes.value
+
+            console.log(attributes)
 
             const disp = display[host]?.[port]?.devices?.[domain]?.[family]?.[member]?.attributes
 
