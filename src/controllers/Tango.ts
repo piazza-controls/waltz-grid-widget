@@ -257,24 +257,22 @@ export class TangoController extends ReduxStoreController<TangoState> {
         })
     }
     actions = {
-        load: this.createAsyncAction<Selector, {diff: any, paths: {inputs: Array<ApiPoint<any>>, outputs: Array<ApiPoint<any>>}}>({
+        load: this.createAsyncAction<Selector, Array<Array<ApiPoint<any>>>>({
 
             action: async (input, api) => {
 
                 const delayMs = 5000 // TODO: remove hardcode
                 const now = (new Date()).getTime()
-
                 const state = (api.getState() as any)[this.name] as TangoState
+                const apiUrl = new URL(`hosts/`, genTangoURL(state.restApiUrl)).href
 
                 const pathMatchSelector = (path: string, selector: Selector) => {
-                    const checkStep = (parts: Array<String>, slice: any): boolean => {
+                    const checkStep = (parts: Array<string>, slice: any): boolean => {
                         const part = parts[0]
                         for(const entry in slice) {
                             if(part === entry || entry === "*") {
                                 if(parts.length === 1)
                                     return true
-                                // if(typeof slice[entry] !== "object" )
-                                //     return false
                                 if(checkStep(parts.slice(1), slice[entry])) {
                                     return true
                                 }
@@ -285,9 +283,8 @@ export class TangoController extends ReduxStoreController<TangoState> {
                     return checkStep(path.split("/"), selector)
                 }
 
-
-                const findOutputs = (slice: any, path: string): Array<ApiPoint<any>> => {
-                    let outputs: Array<ApiPoint<any>> = []
+                const findOutputs = (slice: any, path: string): Array<string> => {
+                    let outputs: Array<string> = []
                     if(typeof slice === "object" && slice !== null) {
                         Object.keys(slice).forEach(key => {
                             if(slice[key].hasOwnProperty("_links")) {
@@ -296,70 +293,41 @@ export class TangoController extends ReduxStoreController<TangoState> {
                             const value = slice[key]
                             if(typeof value === "object") {
                                 if(value.hasOwnProperty("__api__")) {
-                                    outputs.push(value as ApiPoint<any>)
+                                    outputs.push(value.__api__.path)
                                 } else {
                                     outputs.push(...findOutputs(value, `${path}/${key}`))
                                 }
                             } else if(typeof value === "string" && value.startsWith("http")) {
                                 slice[key] = {
                                     error: null,
-                                    value: null,
+                                    value: {},
                                     __api__: {
                                         updated: 0,
                                         path: `${path}/${key}`
                                     }
                                 }
-                                outputs.push(slice[key])
+                                outputs.push(slice[key].__api__.path)
                             }
                         })
                     }
                     return outputs
                 }
 
-                // Object.entries(input).forEach( entry => {
-                //     const [host, ports] = entry
-                //     Object.entries(ports).forEach( portEntry => {
-                //         const [port, value] = portEntry
-                //         if(!state.servers.hasOwnProperty(host)) {
-                //             state.servers[host] = {}
-                //         }
-                //         if(!state.servers[host].hasOwnProperty(port)) {
-                //             state.servers[host][Number(port)] = {
-                //                 error: null,
-                //                 value: null,
-                //                 __api__: {
-                //                     updated: 0
-                //                 }
-                //             }
-                //         }
-                //     })
-                // })
-                const apiUrl = new URL(`hosts/`, genTangoURL(state.restApiUrl)).href
 
-                const processPath = async (input: string): Promise<{input?: ApiPoint<any>, outputs:Array<ApiPoint<any>>}> => {
+                const processPath = async (path: string): Promise<ApiPoint<any>> => {
 
-                    const existed = _.at(
-                        state as any, input.replace("/", "."))[0] as ApiPoint<any>
-                    const good = typeof existed !== "undefined" &&
-                        existed.value !== null && (now - existed.__api__.updated) < delayMs
-                    if (good) {
-                        return { input: null, outputs: findOutputs(existed.value, existed.__api__.path)}
-                    } else {
-                        const url = new URL(input, apiUrl).href
+                        const url = new URL(path, apiUrl).href
                         const resp = await (
                             await fetch(url, {headers: {Authorization: state.authHeader}})).json()
 
                         if(Array.isArray(resp)) {
-
                             const data: {[key: string]: any }= {}
-
-                            let outputs: Array<ApiPoint<any>> = []
-
+                            let outputs: Array<string> = []
                             resp.forEach(res => {
                                 const parts = res.name.split("/")
                                 if(parts.length > 1) {
                                     let curSlice = data as any
-                                    let curPath = input
+                                    let curPath = path
 
                                     parts.slice(0, parts.length - 1).forEach((part: string) => {
                                         if (!curSlice.hasOwnProperty(part)) {
@@ -378,326 +346,125 @@ export class TangoController extends ReduxStoreController<TangoState> {
                                                 path: `${curPath}/${parts[parts.length - 1]}`
                                             }
                                         }
-                                        outputs.push(curSlice[parts[parts.length - 1]])
+                                        outputs.push(`${curPath}/${parts[parts.length - 1]}`)
                                     }
                                 } else {
-                                    if(res.hasOwnProperty("_links")) {
-                                        delete res["_links"]
-                                    }
+                                    if(res.hasOwnProperty("_links")) {delete res["_links"]}
                                     data[res.name] = res
-                                    outputs.push(...findOutputs(data[res.name],`${input}/${res.name}`))
+                                    outputs.push(...findOutputs(data[res.name],`${path}/${res.name}`))
                                 }
                             })
                             return {
-                                input: {
                                     error: null,
                                     value: data,
                                     __api__: {
-                                        path: input,
-                                        updated: now
+                                        path: path,
+                                        updated: now,
+                                        outputs: outputs
                                     }
-                                }, outputs
                             }
                         } else {
                             if(resp.hasOwnProperty("_links")) {
                                 delete resp["_links"]
                             }
-                            const outputs = findOutputs(resp, input)
+                            const outputs = findOutputs(resp, path)
                             return {
-                                input: {
-                                    error: null,
-                                    value: resp,
-                                    __api__: {
-                                        path: input,
-                                        updated: 0,
-                                    }
-                                }, outputs
-                            }
-                        }
-                    }
-                }
-
-
-                let inputs: Array<ApiPoint<any>> = []
-                let outputs: Array<ApiPoint<any>> = []
-
-                await Promise.all(Object.entries(input).map(async entry => {
-                    const [host, ports] = entry
-                    await Promise.all(Object.entries(ports).map(async portEntry => {
-                        const [port, value] = portEntry
-                        const processOutput = async (path: string) => {
-                            if(pathMatchSelector(path, input)) {
-                                const res = await processPath(path)
-                                if(res.input !== null) {
-                                    inputs.push(res.input)
-                                    outputs.push(...res.outputs)
-                                }
-                                await Promise.all(res.outputs.map(async output => {
-                                    await processOutput(output.__api__.path)
-                                }))
-                            }
-                        }
-                        await processOutput(`${host}/${port}`)
-                    }))
-                }))
-
-                let coupledPaths: Array<string> = []
-                outputs.forEach(output => {
-                    inputs.forEach(input => {
-                        if (coupledPaths.includes(output.__api__.path) || coupledPaths.includes(input.__api__.path))
-                            return
-                        if(output.__api__.path === input.__api__.path) {
-                            console.log(output.__api__.path)
-                            coupledPaths.push(output.__api__.path)
-                            output.__api__ = input.__api__
-                            output.value = input.value
-                            output.error = input.error
-                        }
-                    })
-                })
-
-                let paths: {inputs: Array<ApiPoint<any>>, outputs: Array<ApiPoint<any>>} = {
-                    inputs: inputs.filter(input => !coupledPaths.includes(input.__api__.path)),
-                    outputs: outputs.filter(output => !coupledPaths.includes(output.__api__.path))
-                }
-
-
-                const diff: any = {}
-                const validator = (path: Array<string>): ProxyHandler<any> => ({
-                    get(target, key) {
-                        if (typeof target[key] === 'object' && target[key] !== null) {
-                            return new Proxy<any>(target[key], validator([...path, key as string]))
-                        } else {
-                            return target[key];
-                        }
-                    },
-                    set (target, key, value) {
-                        let diffPart = diff
-                        path.forEach(part => {
-                            if(!diffPart.hasOwnProperty(part)) {
-                                diffPart[part] = {}
-                            }
-                            diffPart = diffPart[part]
-                        })
-                        diffPart[key] = value
-                        target[key] = value
-                        return true
-                    }
-                })
-                const proxyState = new Proxy<TangoState>(state, validator([]))
-
-                const process = async (subState: any, subSelector: any, url: any) => {
-
-                    if((subState.value === null && subState.error === null) ||
-                        subState.value && ((new Date()).getTime() - subState.__api__.updated) > delayMs) {
-
-                        const resp = await (
-                            await fetch(url, {headers: {Authorization: state.authHeader}})).json()
-
-                        if(typeof resp === "object" && resp.hasOwnProperty("_links")) {
-                            delete resp["_links"]
-                        } else if(Array.isArray(resp)) {
-                            resp.forEach(element => {
-                                if(typeof element === "object" && element.hasOwnProperty("_links")) {
-                                    delete element.link
-                                }
-                            })
-                        }
-
-                        const changeContent = (subState: any, resp: any) => {
-                            _.mergeWith(subState, resp,(objValue, srcValue) => {
-                                if(typeof srcValue ===  "string" && srcValue.startsWith("http://")) {
-                                    if(typeof objValue === "object" && objValue.hasOwnProperty("__api__")) {
-                                        return objValue
-                                    } else {
-                                        return {
-                                            value: null,
-                                            error: null,
-                                            __api__: {
-                                                updated: 0
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    return srcValue
-                                }
-                            })
-                        }
-
-                        const changeLinks = (subState: any, resp: any) =>  {
-                            Object.keys(resp).forEach(key => {
-                                if((typeof resp[key] === "string" && resp[key].startsWith("http"))) {
-                                    const alreadyHasLink = subState !== null &&
-                                        subState.hasOwnProperty(key) &&
-                                        subState[key].hasOwnProperty("__api__") && false // TODO: fix
-                                    if(alreadyHasLink) {
-                                        delete resp[key]
-                                        resp[key] = subState[key]
-                                    } else {
-                                        resp[key] = {
-                                            value: null,
-                                            error: null,
-                                            __api__: {
-                                                updated: 0
-                                            }
-                                        }
-                                    }
-                                } else if (typeof resp[key] === "object") {
-                                    changeLinks(subState === null? null: subState[key], resp[key])
-                                }
-                            })
-                        }
-
-                        if(Array.isArray(resp)) {
-
-                            if(subState.value === null) {
-                                subState.value = {}
-                            }
-
-                            if(resp[0].hasOwnProperty("name")) {
-                                if(resp[0].hasOwnProperty("href")) {
-                                    resp.forEach(r => {
-                                        const parts = r.name.split("/")
-                                        let subSubState = subState.value
-                                        parts.slice(0, parts.length - 1).forEach((part: string) => {
-                                            if(!subSubState.hasOwnProperty(part)) {
-                                                subSubState[part] = {}
-                                            }
-                                            subSubState = subSubState[part]
-                                        })
-                                        if(!subSubState.hasOwnProperty(parts[parts.length - 1])) {
-                                            subSubState[parts[parts.length - 1]] = {
-                                                error: null,
-                                                value: null,
-                                                __api__: {
-                                                    updated: 0
-                                                }
-                                            }
-                                        }
-                                    })
-                                } else {
-                                    resp.forEach(r => {
-                                        changeLinks(
-                                            subState.value.hasOwnProperty(r.name)?
-                                                subState.value[r.name]: null, r)
-                                        subState.value[r.name] = r
-                                        // if(!subState.value.hasOwnProperty(r.name)) {
-                                        //     subState.value[r.name] = {}
-                                        // }
-                                        // changeContent(subState.value[r.name], r)
-                                    })
-                                }
-                            }
-                            subState.__api__.updated = (new Date()).getTime()
-                        } else {
-                            if(subState.value === null)
-                                subState.value = {}
-                            // console.log(subState.value)
-                            // changeContent(subState.value, resp)
-                            changeLinks(subState.value, resp)
-                            subState.value = resp
-                            subState.__api__.updated = (new Date()).getTime()
-                        }
-                    }
-
-                    const findApi = async (subState: any, subSelector: any, url: string) => {
-                        const keys = Object.keys(subSelector)
-                        await Promise.all(Object.entries(subState).map(async entry => {
-                            const [key, value] = entry
-                            const haveStar = keys.includes("*")
-                            if(keys.includes(key) || haveStar) {
-                                if(typeof value === "object") {
-                                    if(value.hasOwnProperty("__api__")) {
-                                        await process(subState[key], subSelector[haveStar? "*": key],
-                                            new URL(key, `${url}/`).href)
-                                    } else {
-                                        await findApi(subState[key], subSelector[haveStar? "*": key],
-                                            new URL(key, `${url}/`).href)
-                                    }
-                                }
-                            }
-                        }))
-                    }
-
-                    await findApi(subState.value, subSelector, url)
-                }
-
-                let servers: Array<{name: string, href: string}> = []
-
-                await Promise.all(Object.entries(input).map(async entry => {
-                    const [host, ports] = entry
-                    await Promise.all(Object.entries(ports).map( async portEntry => {
-                        const [port, value] = portEntry
-                        if(!proxyState.servers.hasOwnProperty(host)) {
-                            proxyState.servers[host] = {}
-                        }
-                        if(!proxyState.servers[host].hasOwnProperty(port)) {
-                            proxyState.servers[host][Number(port)] = {
                                 error: null,
-                                value: null,
+                                value: resp,
                                 __api__: {
-                                    updated: 0
-                                }
+                                    path: path,
+                                    outputs,
+                                    updated: now,
                             }
                         }
-                        await process(
-                            proxyState.servers[host][Number(port)],
-                            input[host][port],
-                            new URL(`${host}/${port}`, apiUrl).href)
-                    }))
-                }))
+                    }
+                }
 
-                return {diff, paths}
+
+                const iteration = async (paths: Array<string>): Promise<{points: Array<ApiPoint<any>>, next: Array<string>}> => {
+
+                    if(paths.length === 0) {
+                        return {points: [], next: []}
+                    }
+
+                    let next: Array<string> = []
+                    let points: Array<ApiPoint<any>> = []
+
+                    await Promise.all(paths.map(async path => {
+                        let point: ApiPoint<any> = _.at(state.servers as any, path.replace("/","."))[0]
+                        if(typeof point !== "undefined") {
+                            // if(point.__api__.updated ) // TODO: add checking
+                            next.push(...point.__api__.outputs.filter(output => pathMatchSelector(output, input)))
+                        } else {
+                            point = await processPath(path)
+                            next.push(...point.__api__.outputs.filter(output => pathMatchSelector(output, input)))
+                            points.push(point)
+                        }
+                    }))
+
+                    if(points.length === 0) {
+                        return await iteration(next)
+                    } else {
+                        return {points, next}
+                    }
+                }
+
+                const getInitialPaths = () => {
+                    let paths: Array<string> = []
+                    Object.keys(input).forEach(host => {
+                        Object.keys(input[host]).forEach(port => {
+                            const path = `${host}/${port}`
+                            paths.push(path)
+                        })
+                    })
+                    return paths
+                }
+
+                let iters: Array<Array<ApiPoint<any>>> = []
+                let paths = getInitialPaths()
+
+                while (true) {
+                    const {points, next} = await iteration(paths)
+                    iters.push(points)
+                    paths = next
+                    if(next.length === 0)
+                        break
+                }
+
+                return  iters
             },
             fulfilled(state, action) {
 
-                Object.keys(action.meta.arg).forEach(host => {
-                    Object.keys(action.meta.arg[host]).forEach(port => {
-                        if(!state.servers.hasOwnProperty(host)) {
-                            state.servers[host] = {}
+                action.payload.forEach(iter => {
+
+                    const pathToSelector = (path: string): string =>  {
+                        const parts = path.split("/")
+                        if(parts.length > 2) {
+                            parts[1] = `${parts[1]}.value`
                         }
-                        if(!state.servers[host].hasOwnProperty(port)) {
-                            state.servers[host][Number(port)] = {
-                                value: null,
-                                error: null,
-                                __api__: {
-                                    updated: 0,
-                                    path: `${host}/${port}`
-                                }
-                            }
+                        if(parts.length > 3) {
+                            parts[2] = `${parts[2]}.value`
                         }
+                        if(parts.length > 6) {
+                            parts[5] = `${parts[5]}.value`
+                        }
+                        if(parts.length > 7) {
+                            parts[6] = `${parts[6]}.value`
+                        }
+                        return parts.join(".")
+                    }
+
+                    iter.forEach(it => {
+                        console.log(it.__api__.path)
+                        if(it.__api__.path.split("/").length === 2) {
+                            const [host, port] = it.__api__.path.split("/")
+                            _.merge(state.servers, {[host]: {[port]: {}}})
+                        }
+                        let sel = _.at(state.servers, pathToSelector(it.__api__.path))[0]
+                        _.merge(sel, it)
                     })
                 })
-
-                action.payload.paths.outputs.forEach(output => {
-                    const extInput = (_.at(state.servers, output.__api__.path.replace("/","."))[0] as any) as ApiPoint<any>
-                    if(extInput != undefined) {
-                        output.__api__ = extInput.__api__
-                        output.value = extInput.value
-                        output.error = extInput.error
-                    }
-                })
-
-                action.payload.paths.outputs.forEach(input => {
-                    const extOutput = (_.at(state.servers, input.__api__.path.replace("/","."))[0] as any) as ApiPoint<any>
-                    if(extOutput != undefined) {
-                        input.__api__ = extOutput.__api__
-                        input.value = extOutput.value
-                        input.error = extOutput.error
-                    }
-                })
-
-                return _.merge({}, state)
-
-
-                // console.log(action.payload.paths)
-                // action.payload.paths.forEach(path => {
-                //    path.
-                // })
-
-                // console.log((action.payload as any).paths)
-                // console.log(state, (action.payload as any).diff)
-                // return _.merge((action.payload as any).diff, state)
+                return state
             },
             rejected(state, action) {
                 console.log(action)

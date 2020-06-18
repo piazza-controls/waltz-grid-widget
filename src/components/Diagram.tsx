@@ -5,13 +5,11 @@ import {DropTargetMonitor} from "react-dnd/lib/interfaces/monitors";
 import {useEffect, useRef, useState} from "react";
 import TangoController, {Selector} from "../controllers/Tango";
 import Card from "@material-ui/core/Card";
-import CardActions from "@material-ui/core/CardActions";
 import CardContent from "@material-ui/core/CardContent";
 import Typography from "@material-ui/core/Typography";
 import Button from "@material-ui/core/Button";
 import {Rnd} from "react-rnd"
 import {FormControl} from "@material-ui/core";
-import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import Select from "@material-ui/core/Select";
 import * as lodash from "lodash"
@@ -206,18 +204,11 @@ export default function() {
                     {/*</CardActions>*/}
                 </Card>
             </Rnd>
-
-
         })}
-
-
 
         {/*<div style={{position: "absolute"}} >*/}
         {/*    TEST*/}
         {/*</div>*/}
-
-
-
 
 
         {/*<svg ref={drop} width={"1100px"} height={"950px"}   style={{border: "3px solid black"}}>*/}
