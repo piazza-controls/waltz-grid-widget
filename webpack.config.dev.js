@@ -68,17 +68,10 @@ module.exports = {
             filename: "[file].map",
             exclude: ["vendor.js", "*@waltz-controls*"],
         }),
-        new webpack.DllReferencePlugin({
-            context: __dirname,
-            manifest: require("waltz-base/dist/vendor-manifest.json"),
-        }),
         new HtmlWebpackPlugin({
             minify: false,
 
+            headHtmlSnippet: '<style>div.app-spinner {position: fixed;top:50%;left:50%;}</style >',
         }),
-        new AddAssetHtmlPlugin({
-            filepath: path.resolve(__dirname, "node_modules/waltz-base/dist/vendor.js")
-        }),
-
     ],
 };

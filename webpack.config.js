@@ -5,9 +5,9 @@ const AddAssetHtmlPlugin = require("add-asset-html-webpack-plugin");
 
 module.exports = {
     mode: "production",
-    entry: './test/main.js',
+    entry: './src/index.ts',
     output: {
-        filename: '[name].js',
+        filename: 'index.js',
         path: path.resolve(__dirname, 'dist'),
     },
     resolve: {
@@ -60,17 +60,5 @@ module.exports = {
             filename: "[file].map",
             exclude: ["vendor.js", "*@waltz-controls*"],
         }),
-        new webpack.DllReferencePlugin({
-            context: __dirname,
-            manifest: require("waltz-base/dist/vendor-manifest.json"),
-        }),
-        new HtmlWebpackPlugin({
-            minify: false,
-
-        }),
-        new AddAssetHtmlPlugin({
-            filepath: path.resolve(__dirname, "node_modules/waltz-base/dist/vendor.js")
-        }),
-
     ],
 };
