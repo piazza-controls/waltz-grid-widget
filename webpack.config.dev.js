@@ -54,7 +54,7 @@ module.exports = {
             }
         ]
     },
-    devtool: false,
+    devtool: "inline-source-map",
     devServer: {
         proxy: {
             '/tango/*': {
@@ -64,10 +64,10 @@ module.exports = {
         }
     },
     plugins: [
-        new webpack.SourceMapDevToolPlugin({
-            filename: "[file].map",
-            exclude: ["vendor.js", "*@waltz-controls*"],
-        }),
+        // new webpack.SourceMapDevToolPlugin({
+        //     filename: "[file].map",
+        //     exclude: ["vendor.js", "*@waltz-controls*"],
+        // }),
         new HtmlWebpackPlugin({
             minify: false,
 
