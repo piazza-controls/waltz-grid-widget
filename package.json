@@ -1,6 +1,6 @@
 {
   "name": "@waltz-controls/waltz-grid-widget",
-  "version": "1.0.1-rc1",
+  "version": "1.0.1-rc2",
   "description": "grid widget for waltz",
   "main": "dist/index.js",
   "module": "dist/index.js",
