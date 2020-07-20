@@ -14,7 +14,7 @@ export declare interface GridWidgetProps {
     }
 }
 
-export default function(props: GridWidgetProps) {
+export function GridWidget(props: GridWidgetProps) {
 
 
     const tileStyle: React.CSSProperties = {

@@ -18,7 +18,7 @@ export declare interface DeviceWidgetProps {
   device: Member
 }
 
-export default function(props: DeviceWidgetProps) {
+export function DeviceWidget(props: DeviceWidgetProps) {
 
   const {device} = props
 

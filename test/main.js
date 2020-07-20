@@ -1,7 +1,7 @@
 import React from 'react'
 import {render} from 'react-dom'
 
-import GridWidget from "../src/GridWidget"
+import {GridWidget} from "../src/GridWidget"
 import {testProps} from "./data"
 
 const elem = document.createElement('div');
