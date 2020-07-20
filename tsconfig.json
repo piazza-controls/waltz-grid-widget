@@ -2,6 +2,8 @@
   "compilerOptions": {
     "module": "CommonJS",
     "target": "es6",
+    "lib": ["ES2015", "DOM"],
+    "esModuleInterop": true,
     "experimentalDecorators": true,
     "sourceMap": true,
     "noImplicitAny": true,
@@ -12,8 +14,8 @@
     "typeRoots": ["./types", "./node_modules/@types"]
   },
   "include": [
-    "src/**/*",
-    "src/api/*"
+    "src/*",
+    "src/**/*"
   ],
   "exclude": [
     "node_modules", "*vendor*", "scripts"

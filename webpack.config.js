@@ -1,7 +1,5 @@
 const path = require('path');
 const webpack = require("webpack");
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const AddAssetHtmlPlugin = require("add-asset-html-webpack-plugin");
 
 module.exports = {
     mode: "production",
@@ -9,32 +7,20 @@ module.exports = {
     output: {
         filename: 'index.js',
         path: path.resolve(__dirname, 'dist'),
+        libraryTarget: 'commonjs',
     },
     resolve: {
-        extensions: ['.ts', '.tsx', '.js', '.jsx']
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        alias: {
+            react: path.resolve(__dirname, './node_modules/react'),
+        },
     },
     module: {
         rules: [
             {
                 test: /\.(tsx?)$/,
-                loader: 'awesome-typescript-loader'
-            },
-            {
-                test: /\.(js|jsx)$/,
+                loader: 'awesome-typescript-loader',
                 exclude: /node_modules/,
-                use: {
-                    loader: "babel-loader",
-                    // options: {
-                    //     sourceMap: true
-                    // }
-                },
-            },
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                include: /node_modules\/waltz_base/,
-                enforce: 'pre',
-                use: ['source-map-loader'],
             },
             {
                 test: /\.css$/i,
@@ -59,6 +45,10 @@ module.exports = {
         new webpack.SourceMapDevToolPlugin({
             filename: "[file].map",
             exclude: ["vendor.js", "*@waltz-controls*"],
+        }),
+        new webpack.DllReferencePlugin({
+            context: __dirname,
+            manifest: require("@waltz-controls/waltz-shared-libs/dist/vendor-manifest.json")
         }),
     ],
 };

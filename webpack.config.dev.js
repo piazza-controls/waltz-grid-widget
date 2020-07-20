@@ -64,13 +64,19 @@ module.exports = {
         }
     },
     plugins: [
-        // new webpack.SourceMapDevToolPlugin({
-        //     filename: "[file].map",
-        //     exclude: ["vendor.js", "*@waltz-controls*"],
-        // }),
+        new webpack.SourceMapDevToolPlugin({
+            filename: "[file].map",
+            exclude: ["vendor.js", "*@waltz-controls*"],
+        }),
+        new webpack.DllReferencePlugin({
+            context: __dirname,
+            manifest: require("@waltz-controls/waltz-shared-libs/dist/vendor-manifest.json")
+        }),
+        new AddAssetHtmlPlugin({
+            filepath: path.resolve(__dirname, "node_modules/@waltz-controls/waltz-shared-libs/dist/vendor.js")
+        }),
         new HtmlWebpackPlugin({
             minify: false,
-
             headHtmlSnippet: '<style>div.app-spinner {position: fixed;top:50%;left:50%;}</style >',
         }),
     ],

@@ -1,5 +1,4 @@
-import { useState } from "react"
-import React = require("react")
+import React from "react"
 import { Member } from "./Tango"
 import Typography from "@material-ui/core/Typography"
 import Divider from "@material-ui/core/Divider"
@@ -18,12 +17,12 @@ export declare interface DeviceWidgetProps {
   device: Member
 }
 
-export default function(props: DeviceWidgetProps) {
+export function DeviceWidget(props: DeviceWidgetProps) {
 
   const {device} = props
 
   const [dispAttrs, setDispAttrs] = React.useState<Array<string>>([])
-  const [newAttr, setNewAttr] = useState<string>("")
+  const [newAttr, setNewAttr] = React.useState<string>("")
 
 
   const headerStyle: React.CSSProperties = {

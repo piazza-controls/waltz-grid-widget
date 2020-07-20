@@ -1,8 +1,8 @@
-import * as React from "react";
+import React from "react";
 import GridList from "@material-ui/core/GridList";
 import GridListTile from "@material-ui/core/GridListTile";
 import { Member } from "./Tango";
-import DeviceWidget from "./DeviceWidget"
+import {DeviceWidget} from "./DeviceWidget"
 
 // import "webix/webix.css"
 
@@ -14,7 +14,7 @@ export declare interface GridWidgetProps {
     }
 }
 
-export default function(props: GridWidgetProps) {
+export function GridWidget(props: GridWidgetProps) {
 
 
     const tileStyle: React.CSSProperties = {
