@@ -15,7 +15,9 @@ export const testDevice: Device = {
 
 export const testProps: GridWidgetProps = {
     devices: [
-      testDevice, testDevice, testDevice
+      testDevice, 
+      {...testDevice, device: "test2"}, 
+      {...testDevice, device: "test3"}
     ],
     geometry: {
         cols: 2,

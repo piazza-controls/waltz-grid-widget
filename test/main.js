@@ -15,6 +15,7 @@ const {geometry, devices} = testProps
 global.gridStore = gridStore
 global.gridSlice = gridSlice
 global.testDevice = testDevice
+gridStore.dispatch(gridSlice.actions.setState(testProps))
 gridStore.dispatch(gridSlice.actions.setDevice(testDevice))
 gridStore.dispatch(gridSlice.actions.updateAttributes({
     host: "localhost:10000",
@@ -26,9 +27,7 @@ gridStore.dispatch(gridSlice.actions.updateAttributes({
       }
     ],
     commands: []
-  }))
-
-// gridStore.
+}))
 
 ReactDom.render(
     <div style={{height: "100vh"}}>

@@ -28,6 +28,9 @@ export const gridSlice = createSlice({
   name: 'GridSlice',
   initialState: initialState,
   reducers: {
+    setState(state, action: PayloadAction<GridWidgetProps>) {
+      return action.payload
+    },
     setDevice(state, action: PayloadAction<Device>) {
 
       const newDevice =  action.payload
