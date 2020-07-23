@@ -1,5 +1,5 @@
 import React from "react"
-import { Member } from "./Tango"
+import { Device } from "./Tango"
 import Typography from "@material-ui/core/Typography"
 import Divider from "@material-ui/core/Divider"
 import Select from "@material-ui/core/Select"
@@ -14,7 +14,7 @@ import TableBody from "@material-ui/core/TableBody"
 
 
 export declare interface DeviceWidgetProps {
-  device: Member
+  device: Device
 }
 
 export function DeviceWidget(props: DeviceWidgetProps) {
@@ -39,7 +39,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
   return <> 
 
     <div style={headerStyle}>
-      <Typography><b>{`Device ${device.name} (${device.state.state})`}</b></Typography>
+      <Typography><b>{`Device ${device.device} (${/*device.state.state*/ "TODO: add state"})`}</b></Typography>
     </div>
     <Divider/>
     <Table size="small" aria-label="a dense table">
@@ -51,11 +51,11 @@ export function DeviceWidget(props: DeviceWidgetProps) {
         </TableRow>
       </TableHead>
       <TableBody>
-        { dispAttrs.map(attr => {
-            const attrData = device.attributes[attr]
+        { dispAttrs.map(attr => {    
+            const attrData = device.attributes.find(att => att.name === attr)
             return <TableRow key={attr}>
               <TableCell component="th" scope="row">{attrData.name}</TableCell>
-              <TableCell align="center">{attrData.value.value}</TableCell>
+              <TableCell align="center">{attrData.value}</TableCell>
               <TableCell align="right"><DeleteIcon onClick={() => {setDispAttrs(dispAttrs.filter(a => a !== attr))}}/></TableCell>
             </TableRow>
           })
@@ -65,8 +65,8 @@ export function DeviceWidget(props: DeviceWidgetProps) {
               <Select style={{width: "70%", float: "left"}}
                 value={newAttr}
                 onChange={e => setNewAttr(e.target.value as string)}>
-                {Object.keys(device.attributes).filter(attr => (!dispAttrs.includes(attr))).map(attr => {
-                  return <MenuItem value={attr} key={attr}>{attr}</MenuItem>
+                {device.attributes.filter(attr => (!dispAttrs.includes(attr.name))).map(attr => {
+                  return <MenuItem value={attr.name} key={attr.name}>{attr.name}</MenuItem>
                 })}
               </Select>
             </TableCell>

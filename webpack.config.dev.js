@@ -54,7 +54,7 @@ module.exports = {
             }
         ]
     },
-    devtool: "inline-source-map",
+    devtool: "none",
     devServer: {
         proxy: {
             '/tango/*': {
