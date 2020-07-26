@@ -1,3 +1,3 @@
-export {DeviceWidgetProps, DeviceWidget} from "./DeviceWidget"
-export {GridWidget, GridWidgetProps, gridSlice, gridStore} from "./GridWidget"
-export * from "./Tango"
+export * from "./DeviceWidget"
+export * from "./GridWidget"
+export * from "./PlotWidget"
