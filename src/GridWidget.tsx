@@ -91,14 +91,27 @@ export const gridSlice = createSlice({
       return action.payload
     },
     setDevice(state, action: PayloadAction<Device>) {
-      const newDevice =  action.payload
-      const idx = state.devices.findIndex(
-        dev => _.isEqual(dev.name, newDevice.name) )
+      const newDevice =  _.cloneDeep(action.payload)
       
-      if(idx === -1) {
-        state.devices.push(action.payload)
+      const devIdx = state.devices.findIndex(
+        dev => _.isEqual(dev.name, newDevice.name) )
+      if(devIdx === -1) {
+        state.devices.push(newDevice)
       } else {
-        state.devices[idx] = action.payload
+        state.devices[devIdx] = newDevice
+      }
+
+      if(!state.config)
+        state.config = {}
+      if(!state.config.devices)
+        state.config.devices = []
+
+      const devConfIdx = state.config.devices.findIndex(
+        dev => _.isEqual(dev.name, newDevice.name) )
+      if(devConfIdx === -1) {
+        state.config.devices.push({name: newDevice.name, commands: [], attributes: []})
+      } else {
+        state.config.devices[devConfIdx] = {name: newDevice.name, commands: [], attributes: []}
       }
     },
     removeDevice(state, action: PayloadAction<Device>) {

@@ -10,9 +10,13 @@ document.body.append(elem)
 const {api, GridWidget} = makeGridWidget(() => console.log("It WORKS!!"))
 
 // gridStore.getState()
+global.testProps = testProps
+global.testDevice = testDevice
+global.testDevice2 = {...testDevice, name: {...testDevice.name, device: "test2"}}
 global.api = api
 api.setState(testProps)
 api.setDevice(testDevice)
+api.applyDiff({config: {devices: [{name: testDevice.name, attributes: [{name: "double_scalar", show: true}]}]}})
 api.updateAttributes({
   name: {
     host: "localhost:10000",

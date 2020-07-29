@@ -141,7 +141,7 @@ export function GridWidgetBase(props: {cmdRunCb: CommandCallback}) {
       borderWidth: "2px",
       borderColor: "#DADEE0",
       background: "white", 
-      backgroundClip: "content-box"
+      backgroundClip: "content-box",
     }
 
     const widgetsCount = geometry.cols * geometry.rows
@@ -156,7 +156,6 @@ export function GridWidgetBase(props: {cmdRunCb: CommandCallback}) {
                     <div style={tileInnerStyle}>
                       <DeviceWidget cmdRunCb={props.cmdRunCb} device={selector.devices[idx]} color={bgcolor}/>
                     </div>
-                    
                   </GridListTile>
                 } else if(_.isArray(selector.general.plots) && selector.devices.length + selector.general.plots.length > idx) {
                   return <GridListTile className={"webix_view"} style={tileStyle} key={idx}>
