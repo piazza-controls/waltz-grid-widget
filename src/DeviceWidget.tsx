@@ -68,18 +68,43 @@ export function DeviceWidget(props: DeviceWidgetProps) {
 
   const closeButton = <IconButton 
   style={{position: "absolute",
-    top: 0,
+    // top: 0,
     right: 0,
     padding: "0px"
-  }}onClick={() => dispatch(removeDevice(device))}>
+  }}
+  onClick={() => dispatch(removeDevice(device))}>
     <CloseIcon/>
   </IconButton>
+
+  const configButton = <>
+    {configMode? <IconButton onClick={() => {
+                    dispatch(applyDiff({
+                      config: {
+                        devices: [
+                          {
+                            name: device.name,
+                            attributes: attrsDiff
+                          }
+                        ]
+                      }
+                    }))
+                    setAttrsDiff([])
+                    setConfigMode(!configMode)}}>
+                      <CheckIcon/>
+                  </IconButton>:
+                  <IconButton onClick={() => setConfigMode(!configMode)}>
+                    <SettingsIcon/>
+                  </IconButton>
+
+    } </>
+
 
   if(configMode) {
     return <> 
       <div style={headerStyle}>
         <Typography>
-          <b>{`Device ${device.name.device} (${/*device.state.state*/ "TODO: add state"})`}</b>
+          <b>{`Device ${device.name.device} (${device.state})`}</b>
+          {configButton}
           {closeButton}
         </Typography>
       </div>
@@ -90,7 +115,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
             <TableRow>
               <TableCell><b>Attribute</b></TableCell>
               <TableCell>Show</TableCell>
-              <TableCell>Polling Period (S)</TableCell>
+              <TableCell>Polling Period (ms)</TableCell>
               <TableCell>Plot</TableCell>
             </TableRow>
           </TableHead>
@@ -112,14 +137,17 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                     }}/>
                   </TableCell>
                   <TableCell>
-                    <Input type="number" value={getAttrConfig(attr.name).pollingPeriodS} onChange={e => {
-                      const diff = _.mergeWith(attrsDiff, [
-                        {
-                          name: device.name,
-                          attributes: [{name: attr.name, pollingPeriodS: e.target.value}],
-                        }
-                      ], comparator)
-                      setAttrsDiff(_.cloneDeep(diff))}}/>
+                    <Input type="number" value={getAttrConfig(attr.name).pollingPeriodS}
+                      onChange={e => {
+                        const diff = _.mergeWith(attrsDiff, [
+                          {
+                            name: device.name,
+                            attributes: [{name: attr.name, pollingPeriodS: e.target.value}],
+                          }
+                        ], comparator)
+                        setAttrsDiff(_.cloneDeep(diff))
+                      }}
+                    />
                   </TableCell>
                   <TableCell>
                     <Select
@@ -187,25 +215,6 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                 </TableRow>
               })
             }
-            <TableRow>
-                <TableCell colSpan={3} align="right">
-                  <IconButton onClick={() => {
-                    dispatch(applyDiff({
-                      config: {
-                        devices: [
-                          {
-                            name: device.name,
-                            attributes: attrsDiff
-                          }
-                        ]
-                      }
-                    }))
-                    setAttrsDiff([])
-                    setConfigMode(!configMode)}}>
-                      <CheckIcon/>
-                  </IconButton>
-              </TableCell>
-            </TableRow>
           </TableBody>
         </Table>
       </div>
@@ -213,7 +222,8 @@ export function DeviceWidget(props: DeviceWidgetProps) {
   } else {
     return <> 
       <div style={headerStyle}>
-        <Typography><b>{`Device ${device.name.device} (${/*device.state.state*/ "TODO: add state"})`}</b> 
+        <Typography><b>{`Device ${device.name.device} (${device.state})`}</b> 
+        {configButton}
         {closeButton}
         </Typography>
       </div>
@@ -268,13 +278,6 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                 </TableRow>
               })
             }
-            <TableRow>
-                <TableCell colSpan={3} align="right">
-                  <IconButton onClick={() => setConfigMode(!configMode)}>
-                      <SettingsIcon/>
-                  </IconButton>
-              </TableCell>
-            </TableRow>
           </TableBody>
         </Table>
       </div>

@@ -39,6 +39,7 @@ export declare interface DeviceIdentifier {
 
 export declare interface Device {
   name: DeviceIdentifier,
+  state: string,
   attributes?: Array<Attribute>
   commands?: Array<Command>
 }
@@ -123,6 +124,7 @@ export const gridSlice = createSlice({
       state.devices = state.devices.map(dev => {
         const match = _.isEqual(dev.name, selDevice.name)
         if(match) {
+          // TODO: Add commands
           selDevice.attributes.forEach(selAttr => {
             const attrIdx = dev.attributes.findIndex(attr => attr.name === selAttr.name) 
             if(attrIdx === -1) {
@@ -131,12 +133,15 @@ export const gridSlice = createSlice({
               dev.attributes[attrIdx] = selAttr
             }
           })
+          if(selDevice.state) {
+            dev.state = selDevice.state
+          }
         }
         return dev
       })
     },
     applyDiff(state, action: PayloadAction<GridWidgetStore>) {
-      _.mergeWith(state, action.payload, comparator)  
+      return _.mergeWith(state, action.payload, comparator)  
     },
     setGeometry(state, action: PayloadAction<GridWidgetGeometry>) {
       state.general.geometry = action.payload
@@ -151,6 +156,17 @@ export const gridSlice = createSlice({
         name: `${action.payload}`,
         id: action.payload
       })
+    },
+    setPlot(state, action: PayloadAction<PlotSettings>) {
+
+        const hasPlot =  state.general.plots.findIndex(plot => plot.id === action.payload.id)
+
+        if(hasPlot !== -1) {
+          state.general.plots[hasPlot] = action.payload
+        } else {
+          state.general.plots.push(action.payload)
+        }
+
     },
     removePlot(state, action: PayloadAction<PlotSettings>) {
       console.log(action.payload)
@@ -201,6 +217,9 @@ export function makeGridWidget(cmdRunCb: CommandCallback) {
       },
       removePlot: (plot: PlotSettings) => {
         store.dispatch(gridSlice.actions.removePlot(plot))
+      },
+      setPlot: (plot: PlotSettings) => {
+        store.dispatch(gridSlice.actions.setPlot(plot))
       },
       runCommand: (device: DeviceIdentifier, name: String, cb: CommandCallback = cmdRunCb) => {
         store.dispatch(gridSlice.actions.runCommand({device, name, cb}))

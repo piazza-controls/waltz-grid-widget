@@ -8,6 +8,9 @@ import { useSelector, useDispatch } from "react-redux"
 import PlotlyChart from 'react-plotlyjs-ts';
 import IconButton from "@material-ui/core/IconButton"
 import CloseIcon from '@material-ui/icons/Close'
+import SettingsIcon from '@material-ui/icons/Settings';
+import CheckIcon from '@material-ui/icons/Check';
+import TextField from '@material-ui/core/TextField';
 
 
 export declare interface PlotWidgetProps {
@@ -21,7 +24,10 @@ export function PlotWidget(props: PlotWidgetProps) {
   const config = useSelector((state: GridWidgetStore) => state.config.devices)
   const devices = useSelector((state: GridWidgetStore) => state.devices)
   const dispatch = useDispatch()
-  const {removePlot} = gridSlice.actions
+  const {removePlot, setPlot} = gridSlice.actions
+
+  const [configMode, setConfigMode] = React.useState<boolean>(false)
+  const [tempName, setTempName] = React.useState<string>(plot.name)
 
   const headerStyle: React.CSSProperties = {
     backgroundColor: color,
@@ -48,6 +54,18 @@ export function PlotWidget(props: PlotWidgetProps) {
   }}onClick={() => dispatch(removePlot(plot))}>
     <CloseIcon/>
   </IconButton>
+
+  const configButton = <>
+  {configMode? <IconButton onClick={() => {
+                  dispatch(setPlot({...plot, name: tempName}))
+                  setConfigMode(!configMode)}}>
+                    <CheckIcon/>
+                </IconButton>:
+                <IconButton onClick={() => setConfigMode(!configMode)}>
+                  <SettingsIcon/>
+                </IconButton>
+
+  } </>
   
   const data = items.map(item => {
     const name = `${item.device.host}/${item.device.device}/${item.attribute}`
@@ -89,7 +107,20 @@ export function PlotWidget(props: PlotWidgetProps) {
 
   return <> 
     <div style={headerStyle}>
-      <Typography><b>{`Plot ${plot.name}`}</b>{closeButton}</Typography>
+      
+      <Typography>
+      {
+        configMode? 
+        <b>Plot <TextField value={tempName} onChange={e => {
+          setTempName(e.target.value)
+        }}></TextField></b>
+        :
+        <b>{`Plot ${plot.name}`}</b>
+      }
+        
+      {configButton}
+      {closeButton}
+      </Typography>
     </div>
     <Divider/>
     <PlotlyChart data={data} layout={layout} />

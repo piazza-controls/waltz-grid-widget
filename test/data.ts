@@ -6,31 +6,26 @@ export const testDevice: Device = {
     host: "localhost:10000",
     device: "test"
   },
+  state: "STOPPED",
   attributes: [
     {
       name: "double_scalar",
       value: 249.43882402802603,
-      history: [{
-        time: 0,
-        value: 240
-      },{
-        time: 1,
-        value: 241
-      },{
-        time: 2,
-        value: 242
-      },{
-        time: 3,
-        value: 243
-      },{
-        time: 4,
-        value: 244
-      },],
+      history: [],
     }
   ],
   commands: [
     {
       name: "test_command"
+    },
+    {
+      name: "start_device"
+    },
+    {
+      name: "stop_device"
+    },
+    {
+      name: "make_data"
     }
   ]
 }
