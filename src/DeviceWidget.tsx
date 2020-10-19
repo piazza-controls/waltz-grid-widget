@@ -80,12 +80,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
     {configMode? <IconButton onClick={() => {
                     dispatch(applyDiff({
                       config: {
-                        devices: [
-                          {
-                            name: device.name,
-                            attributes: attrsDiff
-                          }
-                        ]
+                        devices: attrsDiff
                       }
                     }))
                     setAttrsDiff([])
