@@ -70,10 +70,10 @@ module.exports = {
         }),
         new webpack.DllReferencePlugin({
             context: __dirname,
-            manifest: require("@waltz-controls/waltz-shared-libs/dist/vendor-manifest.json")
+            manifest: require("@piazza-controls/waltz-shared-libs/dist/vendor-manifest.json")
         }),
         new AddAssetHtmlPlugin({
-            filepath: path.resolve(__dirname, "node_modules/@waltz-controls/waltz-shared-libs/dist/vendor.js")
+            filepath: path.resolve(__dirname, "node_modules/@piazza-controls/waltz-shared-libs/dist/vendor.js")
         }),
         new HtmlWebpackPlugin({
             minify: false,
