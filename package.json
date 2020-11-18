@@ -1,6 +1,6 @@
 {
-  "name": "@piazza-controls/waltz-grid-widget",
-  "version": "1.0.1-rc10",
+  "name": "@waltz-controls/waltz-grid-widget",
+  "version": "1.0.1-rc11",
   "description": "grid widget for waltz",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -17,9 +17,9 @@
   "author": "kapot65",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/piazza-controls/waltz-grid-widget/issues"
+    "url": "https://github.com/waltz-controls/waltz-grid-widget/issues"
   },
-  "readme": "https://github.com/piazza-controls/waltz-grid-widget#readme",
+  "readme": "https://github.com/waltz-controls/waltz-grid-widget#readme",
   "dependencies": {
     "@material-ui/core": "^4.10.2",
     "@material-ui/icons": "^4.9.1",
@@ -40,7 +40,7 @@
     "@types/react-dom": "^16.9.8",
     "@types/react-redux": "^7.1.9",
     "@types/shortid": "0.0.29",
-    "@piazza-controls/waltz-shared-libs": "^1.0.2",
+    "@waltz-controls/waltz-shared-libs": "^1.0.3",
     "plotly.js": "^1.54.7",
     "add-asset-html-webpack-plugin": "^3.1.3",
     "awesome-typescript-loader": "^5.2.1",
