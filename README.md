@@ -10,3 +10,6 @@
 npm install @waltz-controls/waltz-grid-widget --registry=https://npm.pkg.github.com/waltz-controls
 ```
 
+## Videos
+
+[1] [Integration GridWidget into Waltz](https://yadi.sk/i/ce893D5mi1KcbQ)
