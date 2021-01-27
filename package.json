@@ -1,6 +1,6 @@
 {
   "name": "@piazza-controls/waltz-grid-widget",
-  "version": "1.0.1-rc10",
+  "version": "1.0.1-rc11",
   "description": "grid widget for waltz",
   "main": "dist/index.js",
   "module": "dist/index.js",
