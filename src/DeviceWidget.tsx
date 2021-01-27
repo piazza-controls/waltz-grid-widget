@@ -67,10 +67,9 @@ export function DeviceWidget(props: DeviceWidgetProps) {
   }
 
   const closeButton = <IconButton 
-  style={{position: "absolute",
-    // top: 0,
-    right: 0,
-    padding: "0px"
+  style={{
+    float: "right",
+    padding: "12px"
   }}
   onClick={() => dispatch(removeDevice(device))}>
     <CloseIcon/>
@@ -98,13 +97,13 @@ export function DeviceWidget(props: DeviceWidgetProps) {
     return <> 
       <div style={headerStyle}>
         <Typography>
-          <b>{`Device ${device.name.host}/${device.name.device} (${device.state})`}</b>
+          <b>{`${device.name.host}/${device.name.device} (${device.state})`}</b>
           {configButton}
           {closeButton}
         </Typography>
       </div>
       <Divider/>
-      <div style={{overflowY: "scroll", height: "95%"}}>
+      <div style={{overflowY: "scroll", height: "calc(100% -48px)"}}>
         <Table size="small" aria-label="a dense table">
           <TableHead>
             <TableRow>
@@ -217,13 +216,13 @@ export function DeviceWidget(props: DeviceWidgetProps) {
   } else {
     return <> 
       <div style={headerStyle}>
-        <Typography><b>{`Device ${device.name.host}/${device.name.device} (${device.state})`}</b>
+        <Typography><b>{`${device.name.host}/${device.name.device} (${device.state})`}</b>
         {configButton}
         {closeButton}
         </Typography>
       </div>
       <Divider/>
-      <div style={{overflowY: "scroll", height: "95%"}}>
+      <div style={{overflowY: "scroll", height: "calc(100% -48px)"}}>
         <Table size="small">
           <TableHead>
             <TableRow>

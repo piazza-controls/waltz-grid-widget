@@ -47,11 +47,12 @@ export function PlotWidget(props: PlotWidgetProps) {
   })
 
   const closeButton = <IconButton 
-  style={{position: "absolute",
-    top: 0,
-    right: 0,
-    padding: "0px"
-  }}onClick={() => dispatch(removePlot(plot))}>
+    style={{
+      float: "right",
+      padding: "12px"
+    }}
+    onClick={() => dispatch(removePlot(plot))}
+  >
     <CloseIcon/>
   </IconButton>
 
@@ -113,7 +114,7 @@ export function PlotWidget(props: PlotWidgetProps) {
         configMode? 
         <b>Plot <TextField value={tempName} onChange={e => {
           setTempName(e.target.value)
-        }}></TextField></b>
+        }}/></b>
         :
         <b>{`Plot ${plot.name}`}</b>
       }
@@ -123,6 +124,14 @@ export function PlotWidget(props: PlotWidgetProps) {
       </Typography>
     </div>
     <Divider/>
-    <PlotlyChart data={data} layout={layout} />
+    <div
+     style={{
+      overflowY: "scroll",
+       height: "calc(100% - 48px)"
+     }}
+    >
+      <PlotlyChart data={data} layout={layout} />
+    </div>
+
   </>
 }
