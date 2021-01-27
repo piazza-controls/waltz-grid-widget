@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDom from 'react-dom'
-import {makeGridWidget} from "../src/GridWidget"
+import {makeGridWidget} from "../src"
 import {testProps, testDevice} from "./data"
 
 const elem = document.createElement('div');
@@ -26,10 +26,10 @@ const {api, GridWidget} = makeGridWidget((cmd) => {
       const dev = state.devices[0]
       api.updateAttributes({...dev, attributes: [{
         name: "double_scalar",
-        value: 12345,
+        value: 245,
         history: [{
           time: 0,
-          value: 240
+          value: 242
         },{
           time: 1,
           value: 241
@@ -38,7 +38,7 @@ const {api, GridWidget} = makeGridWidget((cmd) => {
           value: 242
         },{
           time: 3,
-          value: 243
+          value: 242
         },{
           time: 4,
           value: 244

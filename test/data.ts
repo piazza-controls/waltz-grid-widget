@@ -1,40 +1,87 @@
-import {GridWidgetStore} from "../src/GridWidget"
-import { Device } from "../src/GridWidget"
+import {GridWidgetStore} from "../src"
+import { Device } from "../src"
 
 export const testDevice: Device = {
   name: {
     host: "localhost:10000",
-    device: "test"
+    device: "test/devices/1"
   },
   state: "STOPPED",
   attributes: [
     {
       name: "double_scalar",
-      value: 249.43882402802603,
+      value: 249.4388,
       history: [],
+    },
+    {
+      name: "long_scalar",
+      value: 245,
+      history: [{
+        time: 0,
+        value: 244
+      },{
+        time: 1,
+        value: 243
+      },{
+        time: 2,
+        value: 242
+      },{
+        time: 3,
+        value: 241
+      },{
+        time: 4,
+        value: 240
+      },]
     }
   ],
   commands: [
-    {
-      name: "test_command"
-    },
-    {
-      name: "start_device"
-    },
-    {
-      name: "stop_device"
-    },
-    {
-      name: "make_data"
-    }
+    {name: "test_command"},
+    {name: "start_device"},
+    {name: "stop_device"},
+    {name: "make_data"}
   ]
 }
 
+export const testDevice2: Device = {
+  name: {
+    host: "localhost:10000",
+    device: "test/devices/2"
+  },
+  state: "STOPPED",
+  attributes: [
+    {
+      name: "value",
+      value: Math.sin(3.1415),
+      history: [{
+        time: 0,
+        value: Math.sin(0.5 * 3.1415)
+      },{
+        time: 1,
+        value: Math.sin(3.1415)
+      },{
+        time: 2,
+        value: Math.sin(1.5 * 3.1415)
+      },{
+        time: 3,
+        value: Math.sin(2.0 * 3.1415)
+      },{
+        time: 4,
+        value: Math.sin(2.5 * 3.1415)
+      },]
+    }
+  ],
+  commands: [
+    {name: "test_command"},
+    {name: "start_device"},
+    {name: "stop_device"},
+    {name: "make_data"}
+  ]
+}
+
+
 export const testProps: GridWidgetStore = {
     devices: [
-      testDevice, 
-      // {...testDevice, device: "test2"}, 
-      // {...testDevice, device: "test3"}
+      testDevice, testDevice2
     ],
     config: {
       devices: [

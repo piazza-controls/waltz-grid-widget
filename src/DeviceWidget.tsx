@@ -98,7 +98,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
     return <> 
       <div style={headerStyle}>
         <Typography>
-          <b>{`Device ${device.name.device} (${device.state})`}</b>
+          <b>{`Device ${device.name.host}/${device.name.device} (${device.state})`}</b>
           {configButton}
           {closeButton}
         </Typography>
@@ -184,7 +184,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
             <TableRow>
               <TableCell><b>Command</b></TableCell>
               <TableCell>Show</TableCell>
-              <TableCell></TableCell>
+              <TableCell/>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -217,32 +217,36 @@ export function DeviceWidget(props: DeviceWidgetProps) {
   } else {
     return <> 
       <div style={headerStyle}>
-        <Typography><b>{`Device ${device.name.device} (${device.state})`}</b> 
+        <Typography><b>{`Device ${device.name.host}/${device.name.device} (${device.state})`}</b>
         {configButton}
         {closeButton}
         </Typography>
       </div>
       <Divider/>
       <div style={{overflowY: "scroll", height: "95%"}}>
-        <Table size="small" aria-label="a dense table">
+        <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell><b>Attribute</b></TableCell>
-              <TableCell align="center">Value</TableCell>
-              <TableCell align="right">Modify</TableCell>
+              <TableCell align="center" style={{
+                whiteSpace: "pre", fontFamily: "monospace", fontSize: "large"
+              }}>{"Value".padStart(10, ' ')}</TableCell>
+              {/*<TableCell align="center">Value</TableCell>*/}
+              <TableCell align="right"/>
             </TableRow>
           </TableHead>
           <TableBody>
             {  device.attributes
             .filter(attr => getAttrConfig(attr.name).show)
-            .map(attr => {
-                  return <TableRow key={attr.name}>
+            .map(attr => <TableRow key={attr.name}>
                     <TableCell component="th" scope="row">{attr.name}</TableCell>
-                    <TableCell align="center">{attr.value}</TableCell>
+                    <TableCell align="center" style={{
+                      whiteSpace: "pre", fontFamily: "monospace", fontSize: "large"
+                    }}>{attr.value.toString().padStart(14, ' ')}</TableCell>
                     <TableCell align="right">
                   </TableCell>
                 </TableRow>
-              })
+              )
             }
           </TableBody>
         </Table>
@@ -251,8 +255,8 @@ export function DeviceWidget(props: DeviceWidgetProps) {
           <TableHead>
             <TableRow>
               <TableCell><b>Command</b></TableCell>
-              <TableCell align="center"></TableCell>
-              <TableCell align="right"></TableCell>
+              <TableCell align="center"/>
+              <TableCell align="right"/>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -261,7 +265,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
             .map(cmd => {
                   return <TableRow key={cmd.name}>
                     <TableCell component="th" scope="row">{cmd.name}</TableCell>
-                    <TableCell>
+                    <TableCell align="center">
                       <IconButton 
                       onClick={() => dispatch(runCommand({device: device.name, name: cmd.name, cb: cmdRunCb}))}
                       >

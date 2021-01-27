@@ -53,7 +53,6 @@ export declare interface DeviceConfig {
 export declare interface PlotSettings {
   id: string,
   name: string,
-  // TODO: add time crop threshold
 }
 
 export declare interface GridWidgetStore {
