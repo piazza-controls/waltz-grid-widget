@@ -2,7 +2,7 @@ import React from "react";
 import { Provider } from 'react-redux'
 import {createSlice, createStore, PayloadAction} from "@reduxjs/toolkit"
 import {GridWidgetBase} from "./GridWidgetBase"
-import { comparator } from "./comparator"
+import { comparator } from "./utils/comparator"
 import _ from "lodash"
 
 export declare interface GridWidgetGeometry {

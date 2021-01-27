@@ -7,10 +7,11 @@ import _ from "lodash"
 import { useSelector, useDispatch } from "react-redux"
 import PlotlyChart from 'react-plotlyjs-ts';
 import IconButton from "@material-ui/core/IconButton"
-import CloseIcon from '@material-ui/icons/Close'
 import SettingsIcon from '@material-ui/icons/Settings';
 import CheckIcon from '@material-ui/icons/Check';
 import TextField from '@material-ui/core/TextField';
+import {headerStyle} from "./utils/header/style";
+import {CloseButton} from "./utils/header/CloseButton";
 
 
 export declare interface PlotWidgetProps {
@@ -29,15 +30,6 @@ export function PlotWidget(props: PlotWidgetProps) {
   const [configMode, setConfigMode] = React.useState<boolean>(false)
   const [tempName, setTempName] = React.useState<string>(plot.name)
 
-  const headerStyle: React.CSSProperties = {
-    backgroundColor: color,
-    borderBottomStyle: "solid",
-    borderBottomColor: "rgb(28, 161, 193)",
-    borderBottomWidth: "1px",
-    fontFamily: "Roboto, sans-serif",
-    fontSize: "12px",
-  }
-
   const items = _.flatMap(config, deviceConf => {
     const attrsToPlot = deviceConf.attributes.filter(attr => attr.displayPlot == plot.id)
     return attrsToPlot.map(attr => ({
@@ -46,27 +38,20 @@ export function PlotWidget(props: PlotWidgetProps) {
     }))
   })
 
-  const closeButton = <IconButton 
-    style={{
-      float: "right",
-      padding: "12px"
-    }}
-    onClick={() => dispatch(removePlot(plot))}
-  >
-    <CloseIcon/>
-  </IconButton>
 
   const configButton = <>
-  {configMode? <IconButton onClick={() => {
-                  dispatch(setPlot({...plot, name: tempName}))
-                  setConfigMode(!configMode)}}>
-                    <CheckIcon/>
-                </IconButton>:
-                <IconButton onClick={() => setConfigMode(!configMode)}>
-                  <SettingsIcon/>
-                </IconButton>
-
-  } </>
+    {configMode?
+        <IconButton onClick={() => {
+          dispatch(setPlot({...plot, name: tempName}))
+          setConfigMode(!configMode)}}>
+            <CheckIcon/>
+        </IconButton>
+      :
+        <IconButton onClick={() => setConfigMode(!configMode)}>
+          <SettingsIcon/>
+        </IconButton>
+    }
+  </>
   
   const data = items.map(item => {
     const name = `${item.device.host}/${item.device.device}/${item.attribute}`
@@ -107,7 +92,7 @@ export function PlotWidget(props: PlotWidgetProps) {
   };
 
   return <> 
-    <div style={headerStyle}>
+    <div style={{...headerStyle, backgroundColor: color}}>
       
       <Typography>
       {
@@ -120,7 +105,7 @@ export function PlotWidget(props: PlotWidgetProps) {
       }
         
       {configButton}
-      {closeButton}
+      <CloseButton onClose={() => dispatch(removePlot(plot))}/>
       </Typography>
     </div>
     <Divider/>
