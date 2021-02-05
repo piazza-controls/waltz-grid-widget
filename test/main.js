@@ -1,85 +1,22 @@
 import React from 'react'
 import ReactDom from 'react-dom'
-import {makeGridWidget} from "../src/GridWidget"
+import {makeGridWidget} from "../src"
 import {testProps, testDevice} from "./data"
+import {Subject} from "rxjs";
 
 const elem = document.createElement('div');
 elem.setAttribute("id", "root");
 document.body.append(elem)
 
-const {api, GridWidget} = makeGridWidget((cmd) => {
-  const {device, name} = cmd 
-  console.log(device, name)
-  if(name === "start_device") {
-    setTimeout(() => { 
-      const state = api.store.getState()
-      api.updateAttributes({...state.devices[0], state: "RUNNING"})
-      }, 0)
-  } else if (name === "stop_device") {
-    setTimeout(() => { 
-      const state = api.store.getState()
-      api.updateAttributes({...state.devices[0], state: "STOPPED"})
-    }, 0)
-  } else if (name === "make_data") {
-    setTimeout(() => { 
-      const state = api.store.getState()
-      const dev = state.devices[0]
-      api.updateAttributes({...dev, attributes: [{
-        name: "double_scalar",
-        value: 12345,
-        history: [{
-          time: 0,
-          value: 240
-        },{
-          time: 1,
-          value: 241
-        },{
-          time: 2,
-          value: 242
-        },{
-          time: 3,
-          value: 243
-        },{
-          time: 4,
-          value: 244
-        },]
-      }]})
-    }, 0)
-  } else {
+const {api, GridWidget} = makeGridWidget()
 
-  }
-  
- 
-})
-
-// api.setCallback(cmd => {
-
-//   const {device, name} = cmd
-//   console.log(device, name);
-//    {
-//     api.store.dispatch(api.store.)
-//     api.applyDiff({config: {devices: [{
-//       name: testDevice.name, 
-//       attributes: [{name: "double_scalar", show: true}],
-//       commands: [{
-//         name: "start_device",
-//         show: true
-//       }, {
-//         name: "stop_device",
-//         show: true
-//       }]
-//     }]}})
-//   }
-//   // console.log(api);
-// })
-
-// gridStore.getState()
 global.testProps = testProps
 global.testDevice = testDevice
 global.testDevice2 = {...testDevice, name: {...testDevice.name, device: "test2"}}
 global.api = api
 api.setState(testProps)
 api.setDevice(testDevice)
+
 api.applyDiff({config: {devices: [{
   name: testDevice.name, 
   attributes: [{name: "double_scalar", show: true}],
@@ -94,20 +31,51 @@ api.applyDiff({config: {devices: [{
     show: true
   }]
 }]}})
-api.updateAttributes({
-  name: {
+
+const config = api.getSelector(state => ({config: state.config, general: state.general}))
+config.subscribe(console.log)
+
+global.setCommandHandler = api.setCommandHandler(commands => {
+  const responses = new Subject()
+  commands.pipe(
+  ).subscribe(value => {
+    console.log(value)
+    setTimeout(() => {
+      responses.next(value)
+    }, 1000)
+  })
+  return responses.pipe()
+})
+
+
+let updateInterval = 1000
+api.getSelector(state => {
+  /**
+   * @type DeviceConfig
+   */
+  const devConfig = state.config.devices.find(dev => dev.name = {
     host: "localhost:10000",
     device: "test",
-  },
-  attributes: [
-    {
-      name: "scalar",
-      value: 111
-    }
-  ],
-  commands: [
-  ]
-})
+  })
+  if(!devConfig) return 1;
+  const attConfig = devConfig.attributes.find(attr => attr.name === "scalar")
+  if(!attConfig) return 1;
+  return attConfig.pollingPeriodS? attConfig.pollingPeriodS : 1
+}).subscribe(value => updateInterval = 1000 * value)
+
+const scalarUpdater = () => setTimeout(() => {
+    api.updateAttribute({
+      device: {
+        host: "localhost:10000",
+        device: "test",
+      },
+      attribute: "scalar",
+      value: Math.sin((2 * Math.PI) * ((new Date).getTime() / 60000))
+    })
+    scalarUpdater()
+}, updateInterval)
+scalarUpdater()
+
 
 ReactDom.render(
     <div style={{height: "100vh"}}>

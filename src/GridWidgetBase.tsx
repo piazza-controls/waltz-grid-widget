@@ -2,7 +2,7 @@ import React from "react";
 import GridList from "@material-ui/core/GridList";
 import GridListTile from "@material-ui/core/GridListTile";
 import {DeviceWidget} from "./DeviceWidget"
-import {GridWidgetGeometry, gridSlice, GridWidgetStore, CommandCallback } from "./GridWidget";
+import {GridWidgetGeometry, gridSlice, GridWidgetStore } from "./GridWidget";
 import SettingsIcon from '@material-ui/icons/Settings';
 import Paper from "@material-ui/core/Paper";
 import IconButton from "@material-ui/core/IconButton";
@@ -122,7 +122,7 @@ function Settings(props: {values: Array<Setting<any>>}) {
 }
 
 
-export function GridWidgetBase(props: {cmdRunCb: CommandCallback}) {
+export function GridWidgetBase() {
 
     const selector = useSelector((state: GridWidgetStore) => {return state})
     const dispatch = useDispatch()
@@ -154,7 +154,7 @@ export function GridWidgetBase(props: {cmdRunCb: CommandCallback}) {
                 if(selector.devices.length > idx) {
                   return <GridListTile className={"webix_view"} style={tileStyle} key={idx}>
                     <div style={tileInnerStyle}>
-                      <DeviceWidget cmdRunCb={props.cmdRunCb} device={selector.devices[idx]} color={bgcolor}/>
+                      <DeviceWidget device={selector.devices[idx]} color={bgcolor}/>
                     </div>
                   </GridListTile>
                 } else if(_.isArray(selector.general.plots) && selector.devices.length + selector.general.plots.length > idx) {

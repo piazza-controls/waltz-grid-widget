@@ -1,5 +1,5 @@
-import {GridWidgetStore} from "../src/GridWidget"
-import { Device } from "../src/GridWidget"
+import {GridWidgetStore} from "../src"
+import { Device } from "../src"
 
 export const testDevice: Device = {
   name: {
@@ -12,6 +12,9 @@ export const testDevice: Device = {
       name: "double_scalar",
       value: 249.43882402802603,
       history: [],
+    },
+    {
+      name: "scalar",
     }
   ],
   commands: [
@@ -33,8 +36,7 @@ export const testDevice: Device = {
 export const testProps: GridWidgetStore = {
     devices: [
       testDevice, 
-      // {...testDevice, device: "test2"}, 
-      // {...testDevice, device: "test3"}
+      {...testDevice, name: {...testDevice.name, device: "test2"}},
     ],
     config: {
       devices: [
@@ -46,8 +48,12 @@ export const testProps: GridWidgetStore = {
           attributes: [
             {
               name: "double_scalar",
+              show: false,
+            },
+            {
+              name: "scalar",
               show: true,
-              pollingPeriodS: 5,
+              pollingPeriodS: 2,
               displayPlot: "1"
             }
           ],

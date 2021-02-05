@@ -48,10 +48,11 @@ export function PlotWidget(props: PlotWidgetProps) {
 
   const closeButton = <IconButton 
   style={{position: "absolute",
-    top: 0,
-    right: 0,
-    padding: "0px"
-  }}onClick={() => dispatch(removePlot(plot))}>
+      top: 0,
+      right: 0,
+      padding: "0px"
+    }}
+    onClick={() => dispatch(removePlot(plot))}>
     <CloseIcon/>
   </IconButton>
 
@@ -92,7 +93,7 @@ export function PlotWidget(props: PlotWidgetProps) {
     return {
       name: `${name}`,
       type: 'scatter',
-      x: attr.history.map(p => p.time),
+      x: attr.history.map(p => new Date(p.time)),
       y: attr.history.map(p => p.value)
     }
   })
@@ -111,11 +112,12 @@ export function PlotWidget(props: PlotWidgetProps) {
       <Typography>
       {
         configMode? 
-        <b>Plot <TextField value={tempName} onChange={e => {
-          setTempName(e.target.value)
-        }}></TextField></b>
-        :
-        <b>{`Plot ${plot.name}`}</b>
+        <b>Plot <TextField
+            value={tempName}
+            onChange={e => {
+              setTempName(e.target.value)
+            }}/>
+        </b> : <b>{`Plot ${plot.name}`}</b>
       }
         
       {configButton}

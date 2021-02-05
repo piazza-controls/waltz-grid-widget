@@ -1,9 +1,12 @@
 import React from "react";
-import { Provider } from 'react-redux'
-import {createSlice, createStore, PayloadAction} from "@reduxjs/toolkit"
+import {Provider} from 'react-redux'
+import {AnyAction, createSlice, createStore, PayloadAction, Store, Middleware, applyMiddleware} from "@reduxjs/toolkit"
 import {GridWidgetBase} from "./GridWidgetBase"
-import { comparator } from "./comparator"
+import {mergeComp} from "./comparators"
+
 import _ from "lodash"
+import {getSelector$, getState$} from "./utils/rx";
+import {Observable, Subject} from "rxjs";
 
 export declare interface GridWidgetGeometry {
   cols: number,
@@ -23,13 +26,27 @@ export declare interface Attribute {
   history?: Array<{time: number, value: string|number}>
 }
 
+export declare interface AttributeResponse {
+  device: DeviceIdentifier,
+  attribute: string,
+  value?: string|number
+}
+
 export declare interface CommandConfig {
   name: string, 
   show?: boolean,
 }
 
+// TODO: inheritance
+export declare interface CommandData<T, O> {
+  args?: T,
+  value?: O
+}
+
 export declare interface Command {
-  name: string, 
+  name: string,
+  value?: CommandData<any, any>,
+  history?: Array<{time: number, value: CommandData<any, any>}>
 }
 
 export declare interface DeviceIdentifier {
@@ -68,10 +85,22 @@ export declare interface GridWidgetStore {
   }
 }
 
+declare interface CommandRequest<T> {
+  device: DeviceIdentifier,
+  command: string,
+  args?: T
+}
+
+declare interface CommandResponse<T, O> {
+  device: DeviceIdentifier,
+  command: string,
+  args?: T,
+  value?: O
+}
+
 export declare type CommandCallback = (
   name: {device: DeviceIdentifier, name: String}
 ) => void
-
 
 const initialState: GridWidgetStore = {
   general: {
@@ -92,15 +121,17 @@ export const gridSlice = createSlice({
       return action.payload
     },
     setDevice(state, action: PayloadAction<Device>) {
+
       const newDevice =  _.cloneDeep(action.payload)
-      
+
       const devIdx = state.devices.findIndex(
-        dev => _.isEqual(dev.name, newDevice.name) )
+          dev => _.isEqual(dev.name, newDevice.name) )
       if(devIdx === -1) {
         state.devices.push(newDevice)
       } else {
-        state.devices[devIdx] = newDevice
+        state.devices[devIdx] = _.mergeWith(newDevice, state.devices[devIdx], mergeComp)
       }
+
 
       if(!state.config)
         state.config = {}
@@ -112,36 +143,49 @@ export const gridSlice = createSlice({
       if(devConfIdx === -1) {
         state.config.devices.push({name: newDevice.name, commands: [], attributes: []})
       } else {
-        state.config.devices[devConfIdx] = {name: newDevice.name, commands: [], attributes: []}
+        state.config.devices[devConfIdx] = _.mergeWith(
+            {name: newDevice.name, commands: [], attributes: []},
+            state.config.devices[devConfIdx],
+            mergeComp
+        )
       }
     },
     removeDevice(state, action: PayloadAction<Device>) {
       const deviceToDel =  action.payload
       state.devices = state.devices.filter(dev =>(!_.isEqual(dev.name, deviceToDel.name)))
     },
-    updateAttributes(state, action: PayloadAction<Device>) {
-      const selDevice =  action.payload
-      state.devices = state.devices.map(dev => {
-        const match = _.isEqual(dev.name, selDevice.name)
-        if(match) {
-          // TODO: Add commands
-          selDevice.attributes.forEach(selAttr => {
-            const attrIdx = dev.attributes.findIndex(attr => attr.name === selAttr.name) 
-            if(attrIdx === -1) {
-              dev.attributes.push(selAttr)
-            } else {
-              dev.attributes[attrIdx] = selAttr
-            }
-          })
-          if(selDevice.state) {
-            dev.state = selDevice.state
-          }
+    updateAttribute(state, action: PayloadAction<AttributeResponse>) {
+      console.log(action)
+      const devIdx = state.devices.findIndex(dev => _.isEqual(dev.name, action.payload.device))
+      if(devIdx !== -1) {
+
+        if(!state.devices[devIdx].attributes) {
+          state.devices[devIdx].attributes = []
         }
-        return dev
-      })
+
+        const attIdx = state.devices[devIdx].attributes.findIndex(att => _.isEqual(att.name, action.payload.attribute))
+        if(attIdx !== -1) {
+          if(!state.devices[devIdx].attributes[attIdx].history) {
+            state.devices[devIdx].attributes[attIdx].history = []
+          }
+
+          state.devices[devIdx].attributes[attIdx].value = action.payload.value
+          state.devices[devIdx].attributes[attIdx].history.push({
+            time: new Date().getTime(),
+            value: action.payload.value
+          })
+          // TODO: add time filtering
+        } else {
+          // TODO: error handling
+          console.error(`cant find ${action.payload.device}: ${action.payload.attribute} attribute`)
+        }
+      } else {
+        // TODO: error handling
+        console.error(`cant find ${action.payload.device} device`)
+      }
     },
     applyDiff(state, action: PayloadAction<GridWidgetStore>) {
-      return _.mergeWith(state, action.payload, comparator)  
+      return _.mergeWith(state, action.payload, mergeComp)
     },
     setGeometry(state, action: PayloadAction<GridWidgetGeometry>) {
       state.general.geometry = action.payload
@@ -179,18 +223,94 @@ export const gridSlice = createSlice({
         })
       })
     },
-    runCommand(state, action: PayloadAction<{device: DeviceIdentifier, name: String, cb?: CommandCallback}>) {
-      const {cb, device, name} = action.payload
-      if(cb) cb({device: device, name: name})
+    runCommand(state, _: PayloadAction<CommandRequest<any>>) {},
+    updateCommand(state, action: PayloadAction<CommandResponse<any, any>>) {
+      console.log(action)
+      const devIdx = state.devices.findIndex(dev => _.isEqual(dev.name, action.payload.device))
+      if(devIdx !== -1) {
+
+        if(!state.devices[devIdx].commands) {
+          state.devices[devIdx].commands = []
+        }
+
+        const cmdIdx = state.devices[devIdx].commands.findIndex(cmd => _.isEqual(cmd.name, action.payload.command))
+        if(cmdIdx !== -1) {
+          if(!state.devices[devIdx].commands[cmdIdx].history) {
+            state.devices[devIdx].commands[cmdIdx].history = []
+          }
+
+          state.devices[devIdx].commands[cmdIdx].value = action.payload
+          state.devices[devIdx].commands[cmdIdx].history.push({
+            time: new Date().getTime(),
+            value: action.payload
+          })
+
+          // TODO: add time filtering
+
+        } else {
+          // TODO: error handling
+          console.error(`cant find ${action.payload.device}: ${action.payload.command} command`)
+        }
+      } else {
+        // TODO: error handling
+        console.error(`cant find ${action.payload.device} device`)
+      }
     }
   },
 })
 
-export function makeGridWidget(cmdRunCb: CommandCallback) {
-  const store = createStore(gridSlice.reducer);
+export function createRxCommandMiddleware<T>(commands: Subject<CommandRequest<T>>) {
+  const middleware: Middleware<{},GridWidgetStore> = _ => next => (action: PayloadAction) => {
+    if(action.type === "GridSlice/runCommand") {
+      const runCommand = ((action as any) as PayloadAction<CommandRequest<T>>)
+      commands.next(runCommand.payload)
+    } else {
+
+    } return next(action)
+  }
+  return middleware
+}
+
+declare type CommandHandler<T, O> = (commands: Subject<CommandRequest<T>>) => Observable<CommandResponse<T, O>>
+
+export function setCommandHandler$<T, O>(
+    commands: Subject<CommandRequest<any>>,
+    store: Store<GridWidgetStore, AnyAction>,
+    handler: CommandHandler<T, O> )
+{
+    const handle = handler(commands)
+    // TODO: error handling
+    handle.subscribe(value => {store.dispatch(gridSlice.actions.updateCommand(value))})
+    return handle
+}
+
+
+export function makeGridWidget() {
+
+  const commands = new Subject<CommandRequest<any>>()
+  const rxCommandMiddleware = createRxCommandMiddleware<any>(commands)
+
+  const store = createStore(
+      gridSlice.reducer,
+      applyMiddleware(rxCommandMiddleware)
+  );
+
+  const state$ = getState$(store);
+  const getSelector = <T extends unknown>(selector: (state: GridWidgetStore) => T) => {
+    return getSelector$<T>(state$, selector)
+  }
+
+  const setCommandHandler = <T extends unknown, O extends unknown> (
+      handler: CommandHandler<T, O>) => {
+    console.log(handler)
+    return setCommandHandler$<T, O>(commands, store, handler)
+  }
+
   return {
     api: {
-      store: store,
+      state: state$,
+      getSelector: getSelector,
+      setCommandHandler: setCommandHandler,
       setState: (state: GridWidgetStore) => {
         store.dispatch(gridSlice.actions.setState(state))
       },
@@ -200,8 +320,8 @@ export function makeGridWidget(cmdRunCb: CommandCallback) {
       removeDevice: (device: Device) => {
         store.dispatch(gridSlice.actions.removeDevice(device))
       },
-      updateAttributes: (device: Device) => {
-        store.dispatch(gridSlice.actions.updateAttributes(device))
+      updateAttribute: (response: AttributeResponse) => {
+        store.dispatch(gridSlice.actions.updateAttribute(response))
       },
       applyDiff: (diff: GridWidgetStore) => {
         store.dispatch(gridSlice.actions.applyDiff(diff))
@@ -221,13 +341,14 @@ export function makeGridWidget(cmdRunCb: CommandCallback) {
       setPlot: (plot: PlotSettings) => {
         store.dispatch(gridSlice.actions.setPlot(plot))
       },
-      runCommand: (device: DeviceIdentifier, name: String, cb: CommandCallback = cmdRunCb) => {
-        store.dispatch(gridSlice.actions.runCommand({device, name, cb}))
+      // TODO: add type template
+      runCommand: (request: CommandRequest<any>) => {
+        store.dispatch(gridSlice.actions.runCommand(request))
       }
     },
     GridWidget: function GridWidget() {
       return <Provider store={store}>
-        <GridWidgetBase cmdRunCb={cmdRunCb} />
+        <GridWidgetBase/>
       </Provider>
     }
   }

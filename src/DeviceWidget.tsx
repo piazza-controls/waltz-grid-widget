@@ -1,6 +1,6 @@
 import React from "react"
-import { Device, AttributeConfig, GridWidgetStore, DeviceIdentifier, DeviceConfig, gridSlice, CommandConfig, CommandCallback } from "./GridWidget"
-import { comparator } from "./comparator"
+import { Device, AttributeConfig, GridWidgetStore, DeviceIdentifier, DeviceConfig, gridSlice, CommandConfig } from "./GridWidget"
+import { mergeComp } from "./comparators"
 import Typography from "@material-ui/core/Typography"
 import Divider from "@material-ui/core/Divider"
 import Select from "@material-ui/core/Select"
@@ -23,13 +23,12 @@ import { generate } from 'shortid';
 
 export declare interface DeviceWidgetProps {
   device: Device,
-  cmdRunCb: CommandCallback,
   color: string
 }
 
 export function DeviceWidget(props: DeviceWidgetProps) {
 
-  const {device, color, cmdRunCb} = props
+  const {device, color} = props
 
   const plots = useSelector((state: GridWidgetStore) => state.general.plots)
   const config = useSelector((state: GridWidgetStore) => state.config.devices)
@@ -43,7 +42,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
   const getDeviceConfig = (name: DeviceIdentifier): DeviceConfig => {
     const baseConfig = config.find(dev => _.isEqual(name, dev.name)) || {name, commands: [], attributes: []}
     const diffConfig = attrsDiff.find(dev => _.isEqual(name, dev.name)) || {name, commands: [], attributes: []}
-    return _.mergeWith(baseConfig, diffConfig, comparator) 
+    return _.mergeWith(baseConfig, diffConfig, mergeComp)
   }
 
   const getAttrConfig = (name: string): AttributeConfig => {
@@ -127,7 +126,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                           name: device.name,
                           attributes: [{name: attr.name, show: e.target.checked}],
                         }
-                      ], comparator)
+                      ], mergeComp)
                       setAttrsDiff(_.cloneDeep(diff))
                     }}/>
                   </TableCell>
@@ -139,7 +138,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                             name: device.name,
                             attributes: [{name: attr.name, pollingPeriodS: e.target.value}],
                           }
-                        ], comparator)
+                        ], mergeComp)
                         setAttrsDiff(_.cloneDeep(diff))
                       }}
                     />
@@ -160,7 +159,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                             name: device.name,
                             attributes: [{name: attr.name, displayPlot: plotId}],
                           }
-                        ], comparator)
+                        ], mergeComp)
                         setAttrsDiff(_.cloneDeep(diff))
                       }}>
                       <MenuItem value={"None"}>None</MenuItem>
@@ -184,7 +183,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
             <TableRow>
               <TableCell><b>Command</b></TableCell>
               <TableCell>Show</TableCell>
-              <TableCell></TableCell>
+              <TableCell/>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -201,7 +200,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                           name: device.name,
                           commands: [{name: cmd.name, show: e.target.checked}],
                         }
-                      ], comparator)
+                      ], mergeComp)
                       setAttrsDiff(_.cloneDeep(diff))
                     }}/>
                   </TableCell>
@@ -251,8 +250,8 @@ export function DeviceWidget(props: DeviceWidgetProps) {
           <TableHead>
             <TableRow>
               <TableCell><b>Command</b></TableCell>
-              <TableCell align="center"></TableCell>
-              <TableCell align="right"></TableCell>
+              <TableCell align="center"/>
+              <TableCell align="right"/>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -263,7 +262,7 @@ export function DeviceWidget(props: DeviceWidgetProps) {
                     <TableCell component="th" scope="row">{cmd.name}</TableCell>
                     <TableCell>
                       <IconButton 
-                      onClick={() => dispatch(runCommand({device: device.name, name: cmd.name, cb: cmdRunCb}))}
+                      onClick={() => dispatch(runCommand({device: device.name, command: cmd.name}))}
                       >
                         <PlayArrowIcon/>
                       </IconButton>
