@@ -27,8 +27,6 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-plotlyjs-ts": "^2.2.2",
-    "redux-observable": "^1.2.0",
-    "reselect": "^4.0.0",
     "shortid": "^2.2.15"
   },
   "devDependencies": {

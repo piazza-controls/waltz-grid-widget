@@ -78,7 +78,7 @@ scalarUpdater()
 
 
 ReactDom.render(
-    <div style={{height: "100vh"}}>
+    <div style={{height: "calc(100vh - 16px)"}}>
         <GridWidget/>
     </div>, 
 document.getElementById("root"))

@@ -5,7 +5,6 @@ import Typography from "@material-ui/core/Typography"
 import Divider from "@material-ui/core/Divider"
 import Select from "@material-ui/core/Select"
 import MenuItem from "@material-ui/core/MenuItem"
-import CloseIcon from '@material-ui/icons/Close'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import Table from "@material-ui/core/Table"
 import TableHead from "@material-ui/core/TableHead"
@@ -19,7 +18,8 @@ import { Checkbox, Input } from "@material-ui/core"
 import _ from "lodash"
 import { useSelector, useDispatch } from "react-redux"
 import { generate } from 'shortid';
-
+import {headerStyle} from "./utils/header/style";
+import {CloseButton} from "./utils/header/CloseButton";
 
 export declare interface DeviceWidgetProps {
   device: Device,
@@ -55,226 +55,211 @@ export function DeviceWidget(props: DeviceWidgetProps) {
     return devConfig.commands.find(cmd => _.isEqual(cmd.name, name)) || {name}
   }
 
-
-  const headerStyle: React.CSSProperties = {
-    backgroundColor: color,
-    borderBottomStyle: "solid",
-    borderBottomColor: "rgb(28, 161, 193)",
-    borderBottomWidth: "1px",
-    fontFamily: "Roboto, sans-serif",
-    fontSize: "12px",
-  }
-
-  const closeButton = <IconButton 
-  style={{position: "absolute",
-    // top: 0,
-    right: 0,
-    padding: "0px"
-  }}
-  onClick={() => dispatch(removeDevice(device))}>
-    <CloseIcon/>
-  </IconButton>
-
   const configButton = <>
-    {configMode? <IconButton onClick={() => {
-                    dispatch(applyDiff({
-                      config: {
-                        devices: attrsDiff
-                      }
-                    }))
-                    setAttrsDiff([])
-                    setConfigMode(!configMode)}}>
-                      <CheckIcon/>
-                  </IconButton>:
-                  <IconButton onClick={() => setConfigMode(!configMode)}>
-                    <SettingsIcon/>
-                  </IconButton>
+      {configMode?
+          <IconButton onClick={() => {
+            dispatch(applyDiff({
+              config: {
+                devices: attrsDiff
+              }
+            }))
+            setAttrsDiff([])
+            setConfigMode(!configMode)}}>
+              <CheckIcon/>
+          </IconButton>
+        :
+          <IconButton onClick={() => setConfigMode(!configMode)}>
+            <SettingsIcon/>
+          </IconButton>
+      }
+    </>
 
-    } </>
-
-
-  if(configMode) {
     return <> 
-      <div style={headerStyle}>
+      <div style={{...headerStyle, backgroundColor: color}}>
         <Typography>
-          <b>{`Device ${device.name.device} (${device.state})`}</b>
+          <b>{`${device.name.host}/${device.name.device} (${device.state})`}</b>
           {configButton}
-          {closeButton}
+          <CloseButton onClose={() => dispatch(removeDevice(device))}/>
         </Typography>
       </div>
       <Divider/>
-      <div style={{overflowY: "scroll", height: "95%"}}>
-        <Table size="small" aria-label="a dense table">
-          <TableHead>
-            <TableRow>
-              <TableCell><b>Attribute</b></TableCell>
-              <TableCell>Show</TableCell>
-              <TableCell>Polling Period (ms)</TableCell>
-              <TableCell>Plot</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            { (device.attributes || []).map(attr => {      
-                return <TableRow key={attr.name}>
-                  <TableCell>{attr.name}</TableCell>
-                  <TableCell>
-                    <Checkbox 
-                    checked={Boolean(getAttrConfig(attr.name).show)} 
-                    onChange={e => {
-                      const diff = _.mergeWith(attrsDiff, [
-                        {
-                          name: device.name,
-                          attributes: [{name: attr.name, show: e.target.checked}],
-                        }
-                      ], mergeComp)
-                      setAttrsDiff(_.cloneDeep(diff))
-                    }}/>
-                  </TableCell>
-                  <TableCell>
-                    <Input type="number" value={getAttrConfig(attr.name).pollingPeriodS}
-                      onChange={e => {
-                        const diff = _.mergeWith(attrsDiff, [
-                          {
-                            name: device.name,
-                            attributes: [{name: attr.name, pollingPeriodS: e.target.value}],
-                          }
-                        ], mergeComp)
-                        setAttrsDiff(_.cloneDeep(diff))
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={getAttrConfig(attr.name).displayPlot || "None"}
-                      onChange={(e) => {
+      <div style={{overflow: "auto", height: `calc(100% - 48px)`}}>
+          {
+              configMode ?
+                  <>
+                      <Table size="small" aria-label="a dense table">
+                          <TableHead>
+                              <TableRow>
+                                  <TableCell><b>Attribute</b></TableCell>
+                                  <TableCell>Show</TableCell>
+                                  <TableCell>Polling Period (ms)</TableCell>
+                                  <TableCell>Plot</TableCell>
+                              </TableRow>
+                          </TableHead>
+                          <TableBody>
+                              {(device.attributes || []).map(attr => {
+                                  return <TableRow key={attr.name}>
+                                      <TableCell>{attr.name}</TableCell>
+                                      <TableCell>
+                                          <Checkbox
+                                              checked={Boolean(getAttrConfig(attr.name).show)}
+                                              onChange={e => {
+                                                  const diff = _.mergeWith(attrsDiff, [
+                                                      {
+                                                          name: device.name,
+                                                          attributes: [{name: attr.name, show: e.target.checked}],
+                                                      }
+                                                  ], mergeComp)
+                                                  setAttrsDiff(_.cloneDeep(diff))
+                                              }}/>
+                                      </TableCell>
+                                      <TableCell>
+                                          <Input type="number" value={getAttrConfig(attr.name).pollingPeriodS}
+                                                 onChange={e => {
+                                                     const diff = _.mergeWith(attrsDiff, [
+                                                         {
+                                                             name: device.name,
+                                                             attributes: [{
+                                                                 name: attr.name,
+                                                                 pollingPeriodS: e.target.value
+                                                             }],
+                                                         }
+                                                     ], mergeComp)
+                                                     setAttrsDiff(_.cloneDeep(diff))
+                                                 }}
+                                          />
+                                      </TableCell>
+                                      <TableCell>
+                                          <Select
+                                              value={getAttrConfig(attr.name).displayPlot || "None"}
+                                              onChange={(e) => {
 
-                        const plotId = e.target.value === "new"?  generate() : e.target.value as string
+                                                  const plotId = e.target.value === "new" ? generate() : e.target.value as string
 
-                        if(e.target.value === "new") {
-                          dispatch(createNewPlot(plotId))
-                        }
+                                                  if (e.target.value === "new") {
+                                                      dispatch(createNewPlot(plotId))
+                                                  }
 
-                        const diff = _.mergeWith(attrsDiff, [
-                          {
-                            name: device.name,
-                            attributes: [{name: attr.name, displayPlot: plotId}],
-                          }
-                        ], mergeComp)
-                        setAttrsDiff(_.cloneDeep(diff))
-                      }}>
-                      <MenuItem value={"None"}>None</MenuItem>
-                      {
-                        (plots || []).map(item => {
-                          return <MenuItem key={item.name} value={item.id}>{item.name}</MenuItem>
-                        })
-                      }
-                      <MenuItem value={"new"}>Create new Plot</MenuItem>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              })
-            }
-            
-          </TableBody>
-        </Table>
+                                                  const diff = _.mergeWith(attrsDiff, [
+                                                      {
+                                                          name: device.name,
+                                                          attributes: [{name: attr.name, displayPlot: plotId}],
+                                                      }
+                                                  ], mergeComp)
+                                                  setAttrsDiff(_.cloneDeep(diff))
+                                              }}>
+                                              <MenuItem value={"None"}>None</MenuItem>
+                                              {
+                                                  (plots || []).map(item => {
+                                                      return <MenuItem key={item.name}
+                                                                       value={item.id}>{item.name}</MenuItem>
+                                                  })
+                                              }
+                                              <MenuItem value={"new"}>Create new Plot</MenuItem>
+                                          </Select>
+                                      </TableCell>
+                                  </TableRow>
+                              })
+                              }
 
-        <Table size="small" aria-label="a dense table">
-          <TableHead>
-            <TableRow>
-              <TableCell><b>Command</b></TableCell>
-              <TableCell>Show</TableCell>
-              <TableCell/>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {  (device.commands || [])
-            .map(cmd => {
-                  return <TableRow key={cmd.name}>
-                    <TableCell>{cmd.name}</TableCell>
-                    <TableCell>
-                    <Checkbox 
-                    checked={Boolean(getCmdConfig(cmd.name).show)} 
-                    onChange={e => {
-                      const diff = _.mergeWith(attrsDiff, [
-                        {
-                          name: device.name,
-                          commands: [{name: cmd.name, show: e.target.checked}],
-                        }
-                      ], mergeComp)
-                      setAttrsDiff(_.cloneDeep(diff))
-                    }}/>
-                  </TableCell>
-                  <TableCell>
-                  </TableCell>
-                </TableRow>
-              })
-            }
-          </TableBody>
-        </Table>
+                          </TableBody>
+                      </Table>
+                      <Table size="small" aria-label="a dense table">
+                          <TableHead>
+                              <TableRow>
+                                  <TableCell><b>Command</b></TableCell>
+                                  <TableCell>Show</TableCell>
+                                  <TableCell/>
+                              </TableRow>
+                          </TableHead>
+                          <TableBody>
+                              {(device.commands || [])
+                                  .map(cmd => {
+                                      return <TableRow key={cmd.name}>
+                                          <TableCell>{cmd.name}</TableCell>
+                                          <TableCell>
+                                              <Checkbox
+                                                  checked={Boolean(getCmdConfig(cmd.name).show)}
+                                                  onChange={e => {
+                                                      const diff = _.mergeWith(attrsDiff, [
+                                                          {
+                                                              name: device.name,
+                                                              commands: [{name: cmd.name, show: e.target.checked}],
+                                                          }
+                                                      ], mergeComp)
+                                                      setAttrsDiff(_.cloneDeep(diff))
+                                                  }}/>
+                                          </TableCell>
+                                          <TableCell>
+                                          </TableCell>
+                                      </TableRow>
+                                  })
+                              }
+                          </TableBody>
+                      </Table>
+                  </>
+                  :
+                  <>
+                      <Table size="small">
+                          <TableHead>
+                              <TableRow>
+                                  <TableCell><b>Attribute</b></TableCell>
+                                  <TableCell align="center" style={{
+                                      whiteSpace: "pre", fontFamily: "monospace", fontSize: "large"
+                                  }}>{"Value".padStart(10, ' ')}</TableCell>
+                                  {/*<TableCell align="center">Value</TableCell>*/}
+                                  <TableCell align="right"/>
+                              </TableRow>
+                          </TableHead>
+                          <TableBody>
+                              {device.attributes
+                                  .filter(attr => getAttrConfig(attr.name).show)
+                                  .map(attr => <TableRow key={attr.name}>
+                                          <TableCell component="th" scope="row">{attr.name}</TableCell>
+                                          <TableCell align="center" style={{
+                                              whiteSpace: "pre", fontFamily: "monospace", fontSize: "large"
+                                          }}>{String(attr.value).padStart(14, ' ')}</TableCell>
+                                          <TableCell align="right">
+                                          </TableCell>
+                                      </TableRow>
+                                  )
+                              }
+                          </TableBody>
+                      </Table>
+
+                      <Table size="small" aria-label="a dense table">
+                          <TableHead>
+                              <TableRow>
+                                  <TableCell><b>Command</b></TableCell>
+                                  <TableCell align="center"/>
+                                  <TableCell align="right"/>
+                              </TableRow>
+                          </TableHead>
+                          <TableBody>
+                              {(device.commands || [])
+                                  .filter(cmd => getCmdConfig(cmd.name).show)
+                                  .map(cmd => {
+                                      return <TableRow key={cmd.name}>
+                                          <TableCell component="th" scope="row">{cmd.name}</TableCell>
+                                          <TableCell>
+                                              <IconButton
+                                                  onClick={() => dispatch(runCommand({
+                                                      device: device.name,
+                                                      command: cmd.name
+                                                  }))}
+                                              >
+                                                  <PlayArrowIcon/>
+                                              </IconButton>
+                                          </TableCell>
+                                          <TableCell>
+                                          </TableCell>
+                                      </TableRow>
+                                  })
+                              }
+                          </TableBody>
+                      </Table>
+                  </>
+          }
       </div>
     </>
-  } else {
-    return <> 
-      <div style={headerStyle}>
-        <Typography><b>{`Device ${device.name.device} (${device.state})`}</b> 
-        {configButton}
-        {closeButton}
-        </Typography>
-      </div>
-      <Divider/>
-      <div style={{overflowY: "scroll", height: "95%"}}>
-        <Table size="small" aria-label="a dense table">
-          <TableHead>
-            <TableRow>
-              <TableCell><b>Attribute</b></TableCell>
-              <TableCell align="center">Value</TableCell>
-              <TableCell align="right">Modify</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {  device.attributes
-            .filter(attr => getAttrConfig(attr.name).show)
-            .map(attr => {
-                  return <TableRow key={attr.name}>
-                    <TableCell component="th" scope="row">{attr.name}</TableCell>
-                    <TableCell align="center">{attr.value}</TableCell>
-                    <TableCell align="right">
-                  </TableCell>
-                </TableRow>
-              })
-            }
-          </TableBody>
-        </Table>
-
-        <Table size="small" aria-label="a dense table">
-          <TableHead>
-            <TableRow>
-              <TableCell><b>Command</b></TableCell>
-              <TableCell align="center"/>
-              <TableCell align="right"/>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {  (device.commands || [])
-            .filter(cmd => getCmdConfig(cmd.name).show)
-            .map(cmd => {
-                  return <TableRow key={cmd.name}>
-                    <TableCell component="th" scope="row">{cmd.name}</TableCell>
-                    <TableCell>
-                      <IconButton 
-                      onClick={() => dispatch(runCommand({device: device.name, command: cmd.name}))}
-                      >
-                        <PlayArrowIcon/>
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                  </TableCell>
-                </TableRow>
-              })
-            }
-          </TableBody>
-        </Table>
-      </div>
-    </>
-  }
 }

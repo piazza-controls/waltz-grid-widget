@@ -155,7 +155,6 @@ export const gridSlice = createSlice({
       state.devices = state.devices.filter(dev =>(!_.isEqual(dev.name, deviceToDel.name)))
     },
     updateAttribute(state, action: PayloadAction<AttributeResponse>) {
-      console.log(action)
       const devIdx = state.devices.findIndex(dev => _.isEqual(dev.name, action.payload.device))
       if(devIdx !== -1) {
 
@@ -213,7 +212,6 @@ export const gridSlice = createSlice({
 
     },
     removePlot(state, action: PayloadAction<PlotSettings>) {
-      console.log(action.payload)
       state.general.plots = state.general.plots.filter(plot => plot.id !== action.payload.id)
       state.config.devices.forEach((device, deviceIdx) => {
         device.attributes.map((attr, attrIdx) => {
@@ -225,7 +223,6 @@ export const gridSlice = createSlice({
     },
     runCommand(state, _: PayloadAction<CommandRequest<any>>) {},
     updateCommand(state, action: PayloadAction<CommandResponse<any, any>>) {
-      console.log(action)
       const devIdx = state.devices.findIndex(dev => _.isEqual(dev.name, action.payload.device))
       if(devIdx !== -1) {
 
@@ -302,7 +299,6 @@ export function makeGridWidget() {
 
   const setCommandHandler = <T extends unknown, O extends unknown> (
       handler: CommandHandler<T, O>) => {
-    console.log(handler)
     return setCommandHandler$<T, O>(commands, store, handler)
   }
 
